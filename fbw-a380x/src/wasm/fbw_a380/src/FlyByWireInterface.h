@@ -310,6 +310,7 @@ class FlyByWireInterface {
   std::unique_ptr<LocalVariable> idAutothrustN1_c_3;
   std::unique_ptr<LocalVariable> idAutothrustN1_c_4;
   std::unique_ptr<LocalVariable> idAutothrustStatus;
+  std::unique_ptr<LocalVariable> idClimbDerate;
   std::unique_ptr<LocalVariable> idAutothrustMode;
   std::unique_ptr<LocalVariable> idAutothrustModeMessage;
   std::unique_ptr<LocalVariable> idAutothrustDisabled;

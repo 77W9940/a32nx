@@ -439,6 +439,7 @@ void FlyByWireInterface::setupLocalVariables() {
   idThrottlePosition3d_4 = std::make_unique<LocalVariable>("A32NX_3D_THROTTLE_LEVER_POSITION_4");
 
   idAutothrustStatus = std::make_unique<LocalVariable>("A32NX_AUTOTHRUST_STATUS");
+  idClimbDerate = std::make_unique<LocalVariable>("A32NX_CLIMB_DERATE");
   idAutothrustMode = std::make_unique<LocalVariable>("A32NX_AUTOTHRUST_MODE");
   idAutothrustModeMessage = std::make_unique<LocalVariable>("A32NX_AUTOTHRUST_MODE_MESSAGE");
   idAutothrustDisabled = std::make_unique<LocalVariable>("A32NX_AUTOTHRUST_DISABLED");
@@ -2895,6 +2896,10 @@ bool FlyByWireInterface::updateAutothrust(double sampleTime) {
   idAutothrustN1_c_2->set(autoThrustOutput.N1_c_2_percent);
   idAutothrustN1_c_3->set(autoThrustOutput.N1_c_3_percent);
   idAutothrustN1_c_4->set(autoThrustOutput.N1_c_4_percent);
+  // override THR_CLB to THR_DCLB when climb derate is active
+  if (autoThrustOutput.mode == athr_mode::THR_CLB && idClimbDerate->get() > 0) {
+    autoThrustOutput.mode = athr_mode::THR_DCLB;
+  }
   idAutothrustStatus->set(static_cast<double>(autoThrustOutput.status));
   idAutothrustMode->set(static_cast<double>(autoThrustOutput.mode));
   idAutothrustModeMessage->set(static_cast<double>(autoThrustOutput.mode_message));

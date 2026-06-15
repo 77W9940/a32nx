@@ -17,6 +17,7 @@ enum class athr_mode
   MACH,
   THR_MCT,
   THR_CLB,
+  THR_DCLB = 15,
   THR_LVR,
   THR_IDLE,
   A_FLOOR,

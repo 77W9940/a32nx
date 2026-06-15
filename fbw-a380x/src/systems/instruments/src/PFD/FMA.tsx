@@ -520,6 +520,7 @@ interface CellProps extends ComponentProps {
 
 class A1A2Cell extends ShowForSecondsComponent<CellProps> {
   private athrMode = 0;
+  private climbDerate = 0;
 
   private cellRef = FSComponent.createRef<SVGGElement>();
 
@@ -610,6 +611,10 @@ class A1A2Cell extends ShowForSecondsComponent<CellProps> {
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR CLB</text>';
         this.displayModeChangedPath();
         break;
+      case 15:
+        text = `<text  class="FontSmall MiddleAlign Green" x="16.782249" y="7.1280665">THR DCLB${this.climbDerate}</text>`;
+        this.displayModeChangedPath();
+        break;
       case 11:
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR LVR</text>';
         this.displayModeChangedPath();
@@ -692,6 +697,14 @@ class A1A2Cell extends ShowForSecondsComponent<CellProps> {
       .whenChanged()
       .handle((athrMode) => {
         this.athrMode = athrMode;
+        this.setText();
+      });
+
+    sub
+      .on('climbDerate')
+      .whenChanged()
+      .handle((climbDerate) => {
+        this.climbDerate = climbDerate;
         this.setText();
       });
 

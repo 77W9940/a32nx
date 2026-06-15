@@ -22,6 +22,7 @@ export interface PFDSimvars {
   fmaModeReversion: boolean;
   fmaSpeedProtection: boolean;
   AThrMode: number;
+  climbDerate: number;
   selectedVs: number;
   ap1Active: boolean;
   ap2Active: boolean;
@@ -190,6 +191,7 @@ export enum PFDVars {
   fmaModeReversion = 'L:A32NX_FMA_MODE_REVERSION',
   fmaSpeedProtection = 'L:A32NX_FMA_SPEED_PROTECTION_MODE',
   AThrMode = 'L:A32NX_AUTOTHRUST_MODE',
+  climbDerate = 'L:A32NX_CLIMB_DERATE',
   selectedVs = 'L:A32NX_AUTOPILOT_VS_SELECTED',
   ap1Active = 'L:A32NX_AUTOPILOT_1_ACTIVE',
   ap2Active = 'L:A32NX_AUTOPILOT_2_ACTIVE',
@@ -357,6 +359,7 @@ export class PFDSimvarPublisher extends UpdatableSimVarPublisher<PFDSimvars> {
     ['fmaModeReversion', { name: PFDVars.fmaModeReversion, type: SimVarValueType.Bool }],
     ['fmaSpeedProtection', { name: PFDVars.fmaSpeedProtection, type: SimVarValueType.Bool }],
     ['AThrMode', { name: PFDVars.AThrMode, type: SimVarValueType.Number }],
+    ['climbDerate', { name: PFDVars.climbDerate, type: SimVarValueType.Number }],
     ['selectedVs', { name: PFDVars.selectedVs, type: SimVarValueType.FPM }],
     ['ap1Active', { name: PFDVars.ap1Active, type: SimVarValueType.Bool }],
     ['ap2Active', { name: PFDVars.ap2Active, type: SimVarValueType.Bool }],

@@ -839,6 +839,7 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
     this.noiseSpeed.set(pd?.noiseSpeed ? pd.noiseSpeed.get() : null);
     this.noiseEnabled.set(pd?.noiseEnabled?.get() ?? false);
     this.climbDerated.set(pd?.climbDerated ? pd.climbDerated.get() : null);
+    SimVar.SetSimVarValue('L:A32NX_CLIMB_DERATE', 'Number', pd?.climbDerated?.get() ?? 0);
     this.descentCabinRate.set(pd?.descentCabinRate ? pd.descentCabinRate.get() : null);
     this.climbPreselectedSpeed.set(pd?.preselectedClimbSpeed ? pd.preselectedClimbSpeed.get() : null);
     this.cruisePreselectedSpeed.set(pd?.preselectedCruiseSpeed ? pd.preselectedCruiseSpeed.get() : null);
@@ -2089,16 +2090,17 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
                   <div class="mfd-label-value-container">
                     <span class="mfd-label mfd-spacing-right">DERATED CLB</span>
                     <DropdownMenu
-                      values={ArraySubject.create(['NONE', '01', '02', '03', '04', '05'])}
-                      inactive={Subject.create(true)}
+                      values={ArraySubject.create(['NONE', 'DCL1', 'DCL2', 'DCL3'])}
+                      inactive={Subject.create(false)}
                       selectedIndex={this.climbDerated as Subscribable<ClimbDerated>}
-                      onModified={(v) =>
+                      onModified={(v) => {
                         this.props.flightPlanInterface.setPerformanceData(
                           'climbDerated',
                           v,
                           this.loadedFlightPlanIndex.get(),
-                        )
-                      }
+                        );
+                        SimVar.SetSimVarValue('L:A32NX_CLIMB_DERATE', 'Number', v ?? 0);
+                      }}
                       idPrefix={`${this.props.mfd.uiService.captOrFo}_MFD_deratedClbDropdown`}
                       freeTextAllowed={false}
                       containerStyle="width: 125px;"
@@ -2156,7 +2158,7 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
                       componentIfTrue={
                         <InputField<number>
                           dataEntryFormat={new SpeedKnotsFormat(Subject.create(90), Subject.create(Vmo))}
-                          inactive={this.clbPageInactive}
+                      inactive={Subject.create(false)}
                           value={this.climbPreselectedSpeed}
                           dataHandlerDuringValidation={(v) =>
                             this.props.flightPlanInterface.setPerformanceData(

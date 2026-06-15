@@ -21,10 +21,19 @@ export class N1Limit extends DisplayComponent<{
 }> {
   private readonly sub = this.props.bus.getArincSubscriber<EwdSimvars & Arinc429Values>();
   private readonly N1LimitType = ConsumerSubject.create(this.sub.on('thrust_limit_type'), 0);
+  private readonly climbDerate = ConsumerSubject.create(this.sub.on('climb_derate'), 0);
   private readonly N1ThrustLimit = ConsumerSubject.create(this.sub.on('thrust_limit'), 0);
   private readonly flexTemp = ConsumerSubject.create(this.sub.on('flex'), 0);
   private readonly sat = Arinc429ConsumerSubject.create(this.sub.on('sat').withArinc429Precision(0));
   private readonly thrustLimitTypeArray = ['', 'CLB', 'MCT', 'FLX', 'TOGA', 'MREV'];
+  private readonly thrustRatingLabel = MappedSubject.create(
+    ([type, derate]) => {
+      if (type === 1 && derate > 0) return `DCLB${derate}`;
+      return this.thrustLimitTypeArray[type];
+    },
+    this.N1LimitType,
+    this.climbDerate,
+  );
 
   private readonly displayFlexTemp = MappedSubject.create(
     ([flexTemp, sat, N1LimitType, active]) => {
@@ -76,7 +85,7 @@ export class N1Limit extends DisplayComponent<{
           x={this.props.x}
           y={this.props.y}
         >
-          {this.N1LimitType.map((t) => this.thrustLimitTypeArray[t])}
+          {this.thrustRatingLabel}
         </text>
         <text
           class={{ F26: true, End: true, Green: true, Spread: true, HiddenElement: this.activeHiddenElement }}

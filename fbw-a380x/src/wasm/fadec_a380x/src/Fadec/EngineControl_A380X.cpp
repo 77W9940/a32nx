@@ -1034,6 +1034,29 @@ void EngineControl_A380X::updateThrustLimits(double simulationTime,
     }
   }
 
+  // Apply climb derate using THR% domain conversion
+  const int climbDerateLevel = static_cast<int>(simData.climbDerate->get());
+  if (climbDerateLevel > 0 && climbDerateLevel <= 3) {
+    const double tat = ambientTemperature * (1 + 0.2 * mach * mach);
+    double dclThrPct = ThrustLimits_A380X::climbDerateFactor(climbDerateLevel, tat, pressAltitude);
+
+    // Convert CLB N1% to THR% using EWD formula (thrustPercentFromN1)
+    double idleN1 = simData.engineIdleN1->get();
+    double maxN1 = toga;
+    const double offset = 0.042;
+
+    double rawRatio = std::min(1.0, std::max(0.0, (clb - idleN1) / (maxN1 - idleN1)));
+    double clbThrPct = (rawRatio * (1.0 - offset) + offset) * 100.0;
+
+    // Use the lower THR% (DCL should never increase thrust beyond normal CLB)
+    double actualThrPct = std::min(clbThrPct, dclThrPct);
+
+    // Convert back to N1%
+    double thr = actualThrPct / 100.0;
+    thr = std::max(offset, std::min(1.0, thr));
+    clb = idleN1 + (maxN1 - idleN1) * (thr - offset) / (1.0 - offset);
+  }
+
   // write limits ---------------------------------------------------------------------------------------------------
   simData.thrustLimitIdle->set(simData.engineIdleN1->get());
   simData.thrustLimitToga->set(toga);
