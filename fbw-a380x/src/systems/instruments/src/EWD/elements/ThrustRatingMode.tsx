@@ -25,14 +25,17 @@ export class N1Limit extends DisplayComponent<{
   private readonly N1ThrustLimit = ConsumerSubject.create(this.sub.on('thrust_limit'), 0);
   private readonly flexTemp = ConsumerSubject.create(this.sub.on('flex'), 0);
   private readonly sat = Arinc429ConsumerSubject.create(this.sub.on('sat').withArinc429Precision(0));
+  private readonly autothrustMode = ConsumerSubject.create(this.sub.on('autothrust_mode'), 0);
+
   private readonly thrustLimitTypeArray = ['', 'CLB', 'MCT', 'FLX', 'TOGA', 'MREV'];
   private readonly thrustRatingLabel = MappedSubject.create(
-    ([type, derate]) => {
-      if (type === 1 && derate > 0) return `DCLB${derate}`;
+    ([type, derate, athrMode]) => {
+      if (type === 1 && derate > 0 && (athrMode === 10 || athrMode === 15)) return `DCLB${derate}`;
       return this.thrustLimitTypeArray[type];
     },
     this.N1LimitType,
     this.climbDerate,
+    this.autothrustMode,
   );
 
   private readonly displayFlexTemp = MappedSubject.create(

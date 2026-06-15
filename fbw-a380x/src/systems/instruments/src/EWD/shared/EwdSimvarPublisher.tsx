@@ -22,6 +22,7 @@ export interface BaseEwdSimvars {
   wing_anti_ice: boolean;
   eng_selector_position: number;
   autothrustStatus: number;
+  autothrust_mode: number;
   thrust_limit_type: number;
   thrust_limit: number;
   thrust_limit_idle: number;
@@ -95,6 +96,7 @@ export class EwdSimvarPublisher extends SimVarPublisher<EwdSimvars> {
       ['wing_anti_ice', { name: 'A:STRUCTURAL DEICE SWITCH', type: SimVarValueType.Bool }],
       ['eng_selector_position', { name: 'L:XMLVAR_ENG_MODE_SEL', type: SimVarValueType.Enum }],
       ['autothrustStatus', { name: 'L:A32NX_AUTOTHRUST_STATUS', type: SimVarValueType.Enum }],
+      ['autothrust_mode', { name: 'L:A32NX_AUTOTHRUST_MODE', type: SimVarValueType.Number }],
       ['thrust_limit_type', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT_TYPE', type: SimVarValueType.Number }],
       ['thrust_limit', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT', type: SimVarValueType.Number }],
       ['thrust_limit_idle', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT_IDLE', type: SimVarValueType.Number }],
