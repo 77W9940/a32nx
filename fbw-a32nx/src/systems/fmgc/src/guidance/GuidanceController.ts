@@ -51,7 +51,7 @@ export interface Fmgc {
   getFOB(forPlan: FlightPlanIndex): number | null;
   getGrossWeight(): number | null;
   getV2Speed(): Knots;
-  getTropoPause(): Feet;
+  getTropoPause(): Feet | null;
   getManagedClimbSpeed(): Knots;
   getManagedClimbSpeedMach(): Mach;
   getAccelerationAltitude(): Feet;
@@ -328,7 +328,7 @@ export class GuidanceController {
 
     this.lnavDriver = new LnavDriver(flightPlanService, this, this.acConfig);
     this.vnavDriver = new VnavDriver(
-      bus,
+      this.bus,
       flightPlanService,
       this,
       this.verticalProfileComputationParametersObserver,

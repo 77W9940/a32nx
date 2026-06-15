@@ -1,5 +1,4 @@
-// @ts-strict-ignore
-// Copyright (c) 2023-2024 FlyByWire Simulations
+// Copyright (c) 2023-2026 FlyByWire Simulations
 // SPDX-License-Identifier: GPL-3.0
 
 import { A380Failure } from '@failures';
@@ -37,13 +36,19 @@ import {
   Subscription,
 } from '@microsoft/msfs-sdk';
 import { ArmedLateralMode, isArmed, LateralMode } from '@shared/autopilot';
-import { ResetPanelSimvars } from 'instruments/src/MsfsAvionicsCommon/providers/ResetPanelPublisher';
-import { FmsSymbolsData } from 'instruments/src/ND/FmsSymbolsPublisher';
+// FIXME should not import from instruments
+import { ResetPanelSimvars } from '../../instruments/src/MsfsAvionicsCommon/providers/ResetPanelPublisher';
+// FIXME should not import from ND!!!
+import { FmsSymbolsData } from '../../instruments/src/ND/FmsSymbolsPublisher';
 import { PowerSupplyBusTypes } from './powersupply';
-import { EgpwcSimVars } from 'instruments/src/MsfsAvionicsCommon/providers/EgpwcBusPublisher';
-import { FGVars } from 'instruments/src/MsfsAvionicsCommon/providers/FGDataPublisher';
-import { AesuBusEvents } from 'instruments/src/MsfsAvionicsCommon/providers/AesuBusPublisher';
-import { MfdSurvEvents } from 'instruments/src/MsfsAvionicsCommon/providers/MfdSurvPublisher';
+// FIXME should not import from instruments
+import { EgpwcSimVars } from '../../instruments/src/MsfsAvionicsCommon/providers/EgpwcBusPublisher';
+// FIXME should not import from instruments
+import { FGVars } from '../../instruments/src/MsfsAvionicsCommon/providers/FGDataPublisher';
+// FIXME should not import from instruments
+import { AesuBusEvents } from '../../instruments/src/MsfsAvionicsCommon/providers/AesuBusPublisher';
+// FIXME should not import from instruments
+import { MfdSurvEvents } from '../../instruments/src/MsfsAvionicsCommon/providers/MfdSurvPublisher';
 import { bearingTo, placeBearingDistance } from 'msfs-geo';
 
 /**
@@ -552,7 +557,7 @@ export class EfisTawsBridge implements Instrument {
     }
 
     const tawsWxrSelected = SimVar.GetSimVarValue('L:A32NX_WXR_TAWS_SYS_SELECTED', SimVarValueType.Number);
-    const extremeLatitude = this.validIrMaintWord ? this.validIrMaintWord.get().bitValueOr(15, false) : false;
+    const extremeLatitude = this.validIrMaintWord.get()?.bitValueOr(15, false) ?? false;
     this.terr1Failed.set(
       this.failuresConsumer.isActive(A380Failure.Terr1) ||
         this.aesu1ResetPulled.get() ||

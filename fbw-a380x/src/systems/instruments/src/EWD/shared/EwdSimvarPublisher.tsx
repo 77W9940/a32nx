@@ -22,6 +22,7 @@ export interface BaseEwdSimvars {
   wing_anti_ice: boolean;
   eng_selector_position: number;
   autothrustStatus: number;
+  autothrust_mode: number;
   thrust_limit_type: number;
   thrust_limit: number;
   thrust_limit_idle: number;
@@ -46,6 +47,7 @@ export interface BaseEwdSimvars {
   afdx_13_13_reachable: boolean;
   afdx_4_3_reachable: boolean;
   afdx_14_13_reachable: boolean;
+  climb_derate: number;
 }
 
 type IndexedTopics =
@@ -94,6 +96,7 @@ export class EwdSimvarPublisher extends SimVarPublisher<EwdSimvars> {
       ['wing_anti_ice', { name: 'A:STRUCTURAL DEICE SWITCH', type: SimVarValueType.Bool }],
       ['eng_selector_position', { name: 'L:XMLVAR_ENG_MODE_SEL', type: SimVarValueType.Enum }],
       ['autothrustStatus', { name: 'L:A32NX_AUTOTHRUST_STATUS', type: SimVarValueType.Enum }],
+      ['autothrust_mode', { name: 'L:A32NX_AUTOTHRUST_MODE', type: SimVarValueType.Number }],
       ['thrust_limit_type', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT_TYPE', type: SimVarValueType.Number }],
       ['thrust_limit', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT', type: SimVarValueType.Number }],
       ['thrust_limit_idle', { name: 'L:A32NX_AUTOTHRUST_THRUST_LIMIT_IDLE', type: SimVarValueType.Number }],
@@ -103,6 +106,7 @@ export class EwdSimvarPublisher extends SimVarPublisher<EwdSimvars> {
       ['n1Idle', { name: 'L:A32NX_ENGINE_IDLE_N1', type: SimVarValueType.Number }],
       ['flex', { name: 'L:A32NX_AIRLINER_TO_FLEX_TEMP', type: SimVarValueType.Number }],
       ['athrTogaWarning', { name: 'L:A32NX_AUTOTHRUST_THRUST_LEVER_WARNING_TOGA', type: SimVarValueType.Bool }],
+      ['climb_derate', { name: 'L:A32NX_CLIMB_DERATE', type: SimVarValueType.Number }],
       ['cpiomB1AgsDiscreteRaw', { name: 'L:A32NX_COND_CPIOM_B1_AGS_DISCRETE_WORD', type: SimVarValueType.Number }],
       ['cpiomB2AgsDiscreteRaw', { name: 'L:A32NX_COND_CPIOM_B2_AGS_DISCRETE_WORD', type: SimVarValueType.Number }],
       ['cpiomB3AgsDiscreteRaw', { name: 'L:A32NX_COND_CPIOM_B3_AGS_DISCRETE_WORD', type: SimVarValueType.Number }],

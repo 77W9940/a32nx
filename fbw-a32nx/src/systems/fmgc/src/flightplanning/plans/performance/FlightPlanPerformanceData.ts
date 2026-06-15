@@ -823,9 +823,7 @@ export enum CostIndexMode {
 
 export enum ClimbDerated {
   NONE = 0,
-  D01 = 1,
-  D02 = 2,
-  D03 = 3,
-  D04 = 4,
-  D05 = 5,
+  DERATE_01 = 1,
+  DERATE_02 = 2,
+  DERATE_03 = 3,
 }

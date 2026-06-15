@@ -12,13 +12,13 @@ import {
   VNode,
 } from '@microsoft/msfs-sdk';
 import '../../common/style.scss';
-import { Button } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/Button';
+import { Button } from '../../../../MsfsAvionicsCommon/UiWidgets/Button';
 import { coordinateToString } from '@flybywiresim/fbw-sdk';
-import { DropdownMenu } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/DropdownMenu';
+import { DropdownMenu } from '../../../../MsfsAvionicsCommon/UiWidgets/DropdownMenu';
 import { WaypointEntryUtils } from '@fmgc/flightplanning/WaypointEntryUtils';
-import { FmcServiceInterface } from 'instruments/src/MFD/FMC/FmcServiceInterface';
+import { FmcServiceInterface } from '../../../FMC/FmcServiceInterface';
 import { FmsDisplayInterface } from '@fmgc/flightplanning/interface/FmsDisplayInterface';
-import { MfdDisplayInterface } from 'instruments/src/MFD/MFD';
+import { MfdDisplayInterface } from '../../../MFD';
 import { FmsError } from '@fmgc/FmsError';
 import { FlightPlanIndex } from '@fmgc/flightplanning/FlightPlanManager';
 import { FlightPlanInterface } from '@fmgc/flightplanning/FlightPlanInterface';
@@ -163,7 +163,7 @@ export class InsertNextWptFromWindow extends DisplayComponent<InsertNextWptFromW
                 idPrefix={`${this.props.captOrFo}_MFD_insertNextWptDropdown`}
                 selectedIndex={this.selectedWaypointIndex}
                 values={this.availableWaypointsString}
-                freeTextAllowed
+                freeTextAllowed={true}
                 containerStyle="width: 175px;"
                 alignLabels="flex-start"
                 onModified={(i, text) => this.onModified(i, text)}

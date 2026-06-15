@@ -12,7 +12,7 @@ import {
 } from '@microsoft/msfs-sdk';
 import { FailuresConsumer } from '@flybywiresim/fbw-sdk';
 import { A380Failure } from '@failures';
-import { ResetPanelSimvars } from 'instruments/src/MsfsAvionicsCommon/providers/ResetPanelPublisher';
+import { ResetPanelSimvars } from '../../MsfsAvionicsCommon/providers/ResetPanelPublisher';
 import { OitSimvars } from '../OitSimvarPublisher';
 import { SecureCommunicationInterface } from './SecureCommunicationInterface';
 
@@ -21,6 +21,7 @@ type AnsuIndex = 1 | 2;
 type AnsuType = 'nss-avncs' | 'flt-ops';
 
 export class AircraftNetworkServerUnit implements Instrument {
+  //TODO ANSU should be under systems host and split between flt-opts and nss-avncs?
   protected readonly subscriptions: Subscription[] = [];
 
   protected readonly sub = this.bus.getSubscriber<ResetPanelSimvars & OitSimvars & ClockEvents>();

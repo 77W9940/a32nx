@@ -1034,6 +1034,20 @@ void EngineControl_A380X::updateThrustLimits(double simulationTime,
     }
   }
 
+  // Apply climb thrust from table lookup (THR% → N1), only when A/THR is in thrust mode
+  const int climbDerateLevel = static_cast<int>(simData.climbDerate->get());
+  if (climbDerateLevel >= 0 && climbDerateLevel <= 3) {
+    const int athrMode = static_cast<int>(simData.autothrustMode->get());
+    if (athrMode == 10 || athrMode == 15) {
+      const double tat = ambientTemperature * (1 + 0.2 * mach * mach);
+      double targetThrPct = ThrustLimits_A380X::climbDerateFactor(climbDerateLevel, tat, pressAltitude);
+
+      const double idleN1 = simData.engineIdleN1->get();
+      const double thr = std::max(0.042, std::min(1.0, targetThrPct / 100.0));
+      clb = idleN1 + (toga - idleN1) * (thr - 0.042) / 0.958;
+    }
+  }
+
   // write limits ---------------------------------------------------------------------------------------------------
   simData.thrustLimitIdle->set(simData.engineIdleN1->get());
   simData.thrustLimitToga->set(toga);

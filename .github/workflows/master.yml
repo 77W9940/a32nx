@@ -1,11 +1,11 @@
 # Build-script for the aircraft master branch
 # Builds the A32NX and the A380X and uploads them to the CloudFlare CDN and GitHub Pre-Release Assets
 
-name: master
+name: fs2020-master
 on:
   push:
     branches:
-      - master
+      - fs2020-master
 
 jobs:
   build_a32nx:
@@ -17,8 +17,13 @@ jobs:
       contents: write
     env:
       FBW_PRODUCTION_BUILD: 1
-      PRE_RELEASE_TAG: assets/master
-      PRE_RELEASE_ID: 66067756
+<<<<<<< HEAD
+      PRE_RELEASE_TAG: assets/msfs2024/master
+      PRE_RELEASE_ID: 313832813
+=======
+      PRE_RELEASE_TAG: assets/msfs2020/master
+      PRE_RELEASE_ID: 313832687
+>>>>>>> pr/10652
       STANDALONE_ZIP_NAME: A32NX-master.7z
       BUILD_DIR_NAME: master-a32nx
       AIRCRAFT_PROJECT_PREFIX: a32nx
@@ -91,7 +96,11 @@ jobs:
         env:
           CLOUDFLARE_CDN_ZONE_ID: ${{ secrets.CLOUDFLARE_CDN_ZONE_ID }}
           CLOUDFLARE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_PURGE_TOKEN }}
-          CDN_BUCKET_DESTINATION: addons/a32nx/master
+<<<<<<< HEAD
+          CDN_BUCKET_DESTINATION: addons/msfs2024/a32nx/master
+=======
+          CDN_BUCKET_DESTINATION: addons/msfs2020/a32nx/master
+>>>>>>> pr/10652
         run: |
           ./scripts/cf-cdn.sh ./fbw-a32nx/out/build-modules $CDN_BUCKET_DESTINATION
       - name: Build Standalone Download files
@@ -140,8 +149,8 @@ jobs:
               "body": "This pre-release has its asset updated on every commit to the master branch\nLast updated on ${{ env.BUILT_DATE_TIME }} from commit ${{ github.sha }}\nThis link will always point to the latest master build: https://github.com/${{ github.repository }}/releases/download/${{ env.PRE_RELEASE_TAG }}/${{ env.STANDALONE_ZIP_NAME }}"
             }'
 
-  build_a380x_8k:
-    name: Build and deploy A380X (8K)
+  build_a380x:
+    name: Build and deploy A380X
     # Prevent running this on forks
     if: github.repository_owner == 'flybywiresim'
     runs-on: ubuntu-latest
@@ -149,11 +158,16 @@ jobs:
       contents: write
     env:
       FBW_PRODUCTION_BUILD: 1
-      PRE_RELEASE_TAG: assets/master
-      PRE_RELEASE_ID: 66067756
+<<<<<<< HEAD
+      PRE_RELEASE_TAG: assets/msfs2024/master
+      PRE_RELEASE_ID: 313832813
+=======
+      PRE_RELEASE_TAG: assets/msfs2020/master
+      PRE_RELEASE_ID: 313832687
+>>>>>>> pr/10652
       BUILD_DIR_NAME: master-a380x
       AIRCRAFT_PROJECT_PREFIX: a380x
-      STANDALONE_ZIP_NAME: A380X-master-8K.7z
+      STANDALONE_ZIP_NAME: A380X-master.7z
       AIRCRAFT_VARIANT: a380-842
     steps:
       - name: Maximize build space
@@ -208,9 +222,6 @@ jobs:
         run: |
           ./scripts/dev-env/run.sh ./scripts/setup.sh --clean
           sudo apt-get install -y rclone
-      - name: Remove A380X 4K textures
-        run: |
-          rm -rf ./large-files/fbw-a380x/src/base/flybywire-aircraft-a380-842/SimObjects/AirPlanes/FlyByWire_A380_842/texture-4k/
       - name: Build A380X
         run: |
           ./scripts/dev-env/run.sh ./scripts/build.sh -r "a380x" --no-tty -j 4
@@ -247,7 +258,10 @@ jobs:
         env:
           CLOUDFLARE_CDN_ZONE_ID: ${{ secrets.CLOUDFLARE_CDN_ZONE_ID }}
           CLOUDFLARE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_PURGE_TOKEN }}
-          CDN_BUCKET_DESTINATION: addons/a380x/master-8k
+<<<<<<< HEAD
+          CDN_BUCKET_DESTINATION: addons/msfs2024/a380x/master
+=======
+          CDN_BUCKET_DESTINATION: addons/msfs2020/a380x/master-8k
         run: |
           ./scripts/cf-cdn.sh ./fbw-a380x/out/build-modules $CDN_BUCKET_DESTINATION
       - name: Build Standalone Download files
@@ -291,8 +305,8 @@ jobs:
       contents: write
     env:
       FBW_PRODUCTION_BUILD: 1
-      PRE_RELEASE_TAG: assets/master
-      PRE_RELEASE_ID: 66067756
+      PRE_RELEASE_TAG: assets/msfs2020/master
+      PRE_RELEASE_ID: 313832687
       BUILD_DIR_NAME: master-a380x
       AIRCRAFT_PROJECT_PREFIX: a380x
       STANDALONE_ZIP_NAME: A380X-master-4K.7z
@@ -386,7 +400,8 @@ jobs:
         env:
           CLOUDFLARE_CDN_ZONE_ID: ${{ secrets.CLOUDFLARE_CDN_ZONE_ID }}
           CLOUDFLARE_PURGE_TOKEN: ${{ secrets.CLOUDFLARE_PURGE_TOKEN }}
-          CDN_BUCKET_DESTINATION: addons/a380x/master-4k
+          CDN_BUCKET_DESTINATION: addons/msfs2020/a380x/master-4k
+>>>>>>> pr/10652
         run: |
           ./scripts/cf-cdn.sh ./fbw-a380x/out/build-modules $CDN_BUCKET_DESTINATION
       - name: Build Standalone Download files
@@ -414,7 +429,7 @@ jobs:
         with:
           token: ${{ github.token }}
           tag: ${{ env.PRE_RELEASE_TAG }}
-          assets: "*A380X-master-4K*"
+          assets: "*A380X-master*"
           fail-if-no-assets: false
       - name: Upload pre-release assets
         uses: dwenegar/upload-release-assets@v1

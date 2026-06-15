@@ -12,7 +12,7 @@ import {
   Subscription,
   VNode,
 } from '@microsoft/msfs-sdk';
-import { TriangleDown, TriangleUp } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/shapes';
+import { TriangleDown, TriangleUp } from './shapes';
 
 export type ButtonMenuItem = {
   label: string | Subscribable<string>;
@@ -69,7 +69,10 @@ export class Button extends DisplayComponent<ButtonProps> {
 
   private onClick() {
     if (!this.disabled.get()) {
-      this.props.onClick();
+      const menuItems = this.props.menuItems?.get();
+      if (menuItems === undefined || menuItems.length === 0) {
+        this.props.onClick();
+      }
     }
   }
 

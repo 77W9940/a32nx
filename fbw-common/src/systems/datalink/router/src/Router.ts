@@ -2,8 +2,8 @@
 //  Copyright (c) 2021, 2023 FlyByWire Simulations
 //  SPDX-License-Identifier: GPL-3.0
 
-import { isMsfs2024, NXDataStore } from '@flybywiresim/fbw-sdk';
-import { EventBus } from '@microsoft/msfs-sdk';
+import { ConfigWeatherMap, isMsfs2024, NXDataStore } from '@flybywiresim/fbw-sdk';
+import { ClockEvents, EventBus } from '@microsoft/msfs-sdk';
 import {
   DatalinkModeCode,
   DatalinkStatusCode,
@@ -63,6 +63,12 @@ export class Router {
   private lastUpdateTime: number = -1;
 
   private vhfRadios: VhfRadioInterface;
+
+  private readonly clock = this.bus
+    .getSubscriber<ClockEvents>()
+    .on('realTime')
+    .atFrequency(1)
+    .handle((t) => this.update(t));
 
   private removeTransmissionTimeout(timeout: number): void {
     const index = this.transmissionSimulationTimeouts.findIndex((value) => value === timeout);
@@ -164,9 +170,7 @@ export class Router {
     this.vdl.reinitialize();
   }
 
-  public update(): void {
-    const currentTimestamp = new Date().getTime();
-
+  public update(currentTimestamp: number): void {
     this.digitalInputs.setVhf3Datamode(this.vhfRadios.isDataModeActive());
 
     // update the communication interface states
@@ -262,9 +266,9 @@ export class Router {
 
     if (index < icaos.length) {
       if (requestMetar === true) {
-        const storedMetarSrc = NXDataStore.getLegacy('CONFIG_METAR_SRC', 'MSFS');
+        const storedMetarSrc = NXDataStore.getSetting('CONFIG_METAR_SRC').get();
 
-        if (storedMetarSrc === 'MSFS') {
+        if (storedMetarSrc === ConfigWeatherMap.MSFS) {
           retval = await MsfsConnector.receiveMsfsMetar(icaos[index], message).then(() =>
             this.receiveWeatherData(requestMetar, icaos, index + 1, message),
           );
@@ -274,8 +278,8 @@ export class Router {
           );
         }
       } else {
-        const storedTafSrc = NXDataStore.getLegacy('CONFIG_TAF_SRC', isMsfs2024() ? 'MSFS' : 'NOAA');
-        if (storedTafSrc === 'MSFS') {
+        const storedTafSrc = NXDataStore.getSetting('CONFIG_TAF_SRC').get();
+        if (storedTafSrc === ConfigWeatherMap.MSFS) {
           retval = await MsfsConnector.receiveMsfsTaf(icaos[index], message).then(() =>
             this.receiveWeatherData(requestMetar, icaos, index + 1, message),
           );

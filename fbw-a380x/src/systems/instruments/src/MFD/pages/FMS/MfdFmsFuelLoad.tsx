@@ -17,18 +17,18 @@ import {
 } from '@microsoft/msfs-sdk';
 
 import './MfdFmsFuelLoad.scss';
-import { AbstractMfdPageProps } from 'instruments/src/MFD/MFD';
-import { Footer } from 'instruments/src/MFD/pages/common/Footer';
+import { AbstractMfdPageProps } from '../../MFD';
+import { Footer } from '../common/Footer';
 
-import { InputField } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/InputField';
+import { InputField } from '../../../MsfsAvionicsCommon/UiWidgets/InputField';
 import {
   CostIndexFormat,
   PaxNbrFormat,
   PercentageFormat,
   TimeHHMMFormat,
   WeightFormat,
-} from 'instruments/src/MFD/pages/common/DataEntryFormats';
-import { Button } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/Button';
+} from '../common/DataEntryFormats';
+import { Button } from '../../../MsfsAvionicsCommon/UiWidgets/Button';
 import {
   maxAltnFuel,
   maxBlockFuel,
@@ -42,12 +42,12 @@ import {
   minZfw,
   minZfwCg,
 } from '@shared/PerformanceConstants';
-import { FmsPage } from 'instruments/src/MFD/pages/common/FmsPage';
-import { MfdSimvars } from 'instruments/src/MFD/shared/MFDSimvarPublisher';
+import { FmsPage } from '../common/FmsPage';
+import { MfdSimvars } from '../../shared/MFDSimvarPublisher';
 import { FmgcFlightPhase } from '@shared/flightphase';
 import { AirlineModifiableInformation } from '@shared/AirlineModifiableInformation';
 import { getEtaFromUtcOrPresent, hhmmFormatter } from '../../shared/utils';
-import { DropdownMenu } from 'instruments/src/MsfsAvionicsCommon/UiWidgets/DropdownMenu';
+import { DropdownMenu } from '../../../MsfsAvionicsCommon/UiWidgets/DropdownMenu';
 import { CostIndexMode } from '../../FMC/fmgc';
 import { NXDataStore } from '@flybywiresim/fbw-sdk';
 import { FlightPlanIndex } from '@fmgc/flightplanning/FlightPlanManager';
@@ -426,12 +426,10 @@ export class MfdFmsFuelLoad extends FmsPage<MfdFmsFuelLoadProps> {
     const fp = hasFp ? this.props.flightPlanInterface.get(fpIndex!) : null;
     this.altnIcao.set(fp?.alternateDestinationAirport?.ident ?? 'NONE');
     this.altnEta.set('--:--');
-    if (fp) {
-      this.altnEfob.set(this.props.fmcService.master.fmgc.getAltEFOB(fpIndex!) ?? NaN, UnitType.KILOGRAM);
-    } else {
-      this.altnEfob.set(NaN);
-    }
-    this.altnEfob.set(hasFp ? this.props.fmcService.master.fmgc.getAltEFOB(fpIndex!) ?? NaN : NaN, UnitType.KILOGRAM);
+    this.altnEfob.set(
+      hasFp ? (this.props.fmcService.master.fmgc.getAltEFOB(fpIndex!) ?? NaN) * 1000 : NaN,
+      UnitType.KILOGRAM,
+    );
   }
 
   render(): VNode {
@@ -868,7 +866,7 @@ export class MfdFmsFuelLoad extends FmsPage<MfdFmsFuelLoadProps> {
                     dataHandlerDuringValidation={async (v) =>
                       this.props.flightPlanInterface?.setPerformanceData(
                         'pilotMinimumDestinationFuelOnBoard',
-                        v,
+                        v !== null ? v / 1000 : null, // FIXME the perf plan should be in kg
                         this.loadedFlightPlanIndex.get(),
                       )
                     }

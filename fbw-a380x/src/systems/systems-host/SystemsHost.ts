@@ -1,5 +1,4 @@
-// @ts-strict-ignore
-// Copyright (c) 2021-2023 FlyByWire Simulations
+// Copyright (c) 2021-2026 FlyByWire Simulations
 //
 // SPDX-License-Identifier: GPL-3.0
 
@@ -16,11 +15,11 @@ import {
   SimVarValueType,
   Subject,
 } from '@microsoft/msfs-sdk';
-import { LegacyGpws } from 'systems-host/Misc/LegacyGpws';
-import { LegacyFuel } from 'systems-host/CpiomF/LegacyFuel';
-import { LegacySoundManager } from 'systems-host/Misc/LegacySoundManager';
-import { LegacyTcasComputer } from 'systems-host/Misc/tcas/components/LegacyTcasComputer';
-import { VhfRadio } from 'systems-host/Misc/Communications/VhfRadio';
+import { LegacyGpws } from './Misc/LegacyGpws';
+import { LegacyFuel } from './CpiomF/LegacyFuel';
+import { LegacySoundManager } from './Misc/LegacySoundManager';
+import { LegacyTcasComputer } from './Misc/tcas/components/LegacyTcasComputer';
+import { VhfRadio } from './Misc/Communications/VhfRadio';
 import {
   IrBusPublisher,
   ArincEventBus,
@@ -34,39 +33,53 @@ import {
   RaBusPublisher,
   LgciuBusPublisher,
 } from '@flybywiresim/fbw-sdk';
-import { AudioManagementUnit } from 'systems-host/Misc/Communications/AudioManagementUnit';
-import { RmpAmuBusPublisher } from 'systems-host/Misc/Communications/RmpAmuBusPublisher';
-import { Transponder } from 'systems-host/Misc/Communications/Transponder';
-import { PowerSupplyBusTypes, PowerSupplyBusses } from 'systems-host/Misc/powersupply';
-import { SimAudioManager } from 'systems-host/Misc/Communications/SimAudioManager';
-import { AtsuSystem } from 'systems-host/CpiomD/atsu';
-import { FwsCore } from 'systems-host/CpiomC/FlightWarningSystem/FwsCore';
-import { FuelSystemPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/FuelSystemPublisher';
-import { BrakeToVacate } from 'systems-host/PseudoPRIM/BrakeToVacate';
-import { PseudoFwcSimvarPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/PseudoFwcPublisher';
-import { FcdcSimvarPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/FcdcPublisher';
+import { AudioManagementUnit } from './Misc/Communications/AudioManagementUnit';
+import { RmpAmuBusPublisher } from './Misc/Communications/RmpAmuBusPublisher';
+import { Transponder } from './Misc/Communications/Transponder';
+import { PowerSupplyBusTypes, PowerSupplyBusses } from './Misc/powersupply';
+import { SimAudioManager } from './Misc/Communications/SimAudioManager';
+import { AtsuSystem } from './CpiomD/atsu';
+import { FwsCore } from './CpiomC/FlightWarningSystem/FwsCore';
+// FIXME should not import from instruments
+import { FuelSystemPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/FuelSystemPublisher';
+import { BrakeToVacate } from './PseudoPRIM/BrakeToVacate';
+// FIXME should not import from instruments
+import { PseudoFwcSimvarPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/PseudoFwcPublisher';
+// FIXME should not import from instruments
+import { FcdcSimvarPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/FcdcPublisher';
+// FIXME should not import from instruments
 import {
   ResetPanelSimvarPublisher,
   ResetPanelSimvars,
-} from 'instruments/src/MsfsAvionicsCommon/providers/ResetPanelPublisher';
+} from '../instruments/src/MsfsAvionicsCommon/providers/ResetPanelPublisher';
+// FIXME should not import from instruments
 import {
   CpiomAvailableSimvarPublisher,
   CpiomAvailableSimvars,
-} from 'instruments/src/MsfsAvionicsCommon/providers/CpiomAvailablePublisher';
-import { EgpwcBusPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/EgpwcBusPublisher';
-import { FGDataPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/FGDataPublisher';
-import { AesuBusPublisher } from 'instruments/src/MsfsAvionicsCommon/providers/AesuBusPublisher';
+} from '../instruments/src/MsfsAvionicsCommon/providers/CpiomAvailablePublisher';
+// FIXME should not import from instruments
+import { EgpwcBusPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/EgpwcBusPublisher';
+// FIXME should not import from instruments
+import { FGDataPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/FGDataPublisher';
+// FIXME should not import from instruments
+import { AesuBusPublisher } from '../instruments/src/MsfsAvionicsCommon/providers/AesuBusPublisher';
 import { A380Failure } from '@failures';
-import { AutoThsTrimmer } from 'systems-host/PseudoPRIM/AutoThsTrimmer';
-import { EfisTawsBridge } from 'systems-host/Misc/EfisTawsBridge';
-import { FmsSymbolsPublisher } from 'instruments/src/ND/FmsSymbolsPublisher';
-import { FmsMessagePublisher } from 'instruments/src/MsfsAvionicsCommon/providers/FmsMessagePublisher';
+import { AutoThsTrimmer } from './PseudoPRIM/AutoThsTrimmer';
+import { EfisTawsBridge } from './Misc/EfisTawsBridge';
+// FIXME should not import from ND!!
+import { FmsSymbolsPublisher } from '../instruments/src/ND/FmsSymbolsPublisher';
+// FIXME should not import from instruments
+import { FmsMessagePublisher } from '../instruments/src/MsfsAvionicsCommon/providers/FmsMessagePublisher';
 import { FqmsBusPublisher } from '@shared/publishers/FqmsBusPublisher';
+import { CpiomData, CpiomDataPublisher } from '@providers/CpiomPublisher';
+import { AtcDatalink } from './CpiomD/AtcDatalink';
+import { Acr } from './CpiomD/Acr';
+import { SimVarHandling } from '@datalink/common';
 
 class SystemsHost extends BaseInstrument {
   private readonly bus = new ArincEventBus();
 
-  private readonly sub = this.bus.getSubscriber<PowerSupplyBusTypes & ResetPanelSimvars & CpiomAvailableSimvars>();
+  private readonly sub = this.bus.getSubscriber<PowerSupplyBusTypes & ResetPanelSimvars & CpiomData>();
 
   private readonly backplane = new InstrumentBackplane();
 
@@ -106,7 +119,10 @@ class SystemsHost extends BaseInstrument {
   // MSFS only supports 1
   // private readonly xpdr2 = new Transponder(2, 144, this.acBus2Powered, this.failuresConsumer);
 
+  private readonly simVarHandling = new SimVarHandling(this.bus);
   private readonly atsu = new AtsuSystem(this.bus);
+  private readonly atc = new AtcDatalink(this.bus);
+  private readonly acr = new Acr(this.bus);
 
   private readonly btv = new BrakeToVacate(this.bus, this);
 
@@ -132,7 +148,7 @@ class SystemsHost extends BaseInstrument {
 
   private readonly resetPanelPublisher = new ResetPanelSimvarPublisher(this.bus);
 
-  private readonly cpiomAvailablePublisher = new CpiomAvailableSimvarPublisher(this.bus);
+  private readonly cpiomDataPublisher = new CpiomDataPublisher(this.bus);
 
   private readonly interactivePointsPublisher = new MsfsFlightModelPublisher(this.bus);
 
@@ -153,8 +169,8 @@ class SystemsHost extends BaseInstrument {
   private readonly fws1ResetPbStatus = ConsumerSubject.create(this.sub.on('a380x_reset_panel_fws1'), false);
   private readonly fws2ResetPbStatus = ConsumerSubject.create(this.sub.on('a380x_reset_panel_fws2'), false);
 
-  private readonly fws1Powered = ConsumerSubject.create(this.sub.on('cpiomC1Avail'), true);
-  private readonly fws2Powered = ConsumerSubject.create(this.sub.on('cpiomC2Avail'), true);
+  private readonly fws1Powered = ConsumerSubject.create(this.sub.on('cpiom_c_available_1'), true);
+  private readonly fws2Powered = ConsumerSubject.create(this.sub.on('cpiom_c_available_2'), true);
 
   private readonly fws1Failed = Subject.create(false);
   private readonly fws2Failed = Subject.create(false);
@@ -203,7 +219,6 @@ class SystemsHost extends BaseInstrument {
     this.backplane.addInstrument('Amu2', this.amu2, true);
     this.backplane.addInstrument('SimAudioManager', this.simAudioManager);
     this.backplane.addInstrument('Xpndr1', this.xpdr1, true);
-    this.backplane.addInstrument('AtsuSystem', this.atsu);
     this.backplane.addInstrument('LegacyFuel', this.legacyFuel);
     this.backplane.addInstrument('BtvDistanceUpdater', this.btv);
     this.backplane.addInstrument('EfisTawsBridge', this.efisTawsBridge);
@@ -218,7 +233,7 @@ class SystemsHost extends BaseInstrument {
     this.backplane.addPublisher('PseudoFwc', this.pseudoFwcPublisher);
     this.backplane.addPublisher('Fcdc', this.fcdcPublisher);
     this.backplane.addPublisher('ResetPanel', this.resetPanelPublisher);
-    this.backplane.addPublisher('CpiomAvailable', this.cpiomAvailablePublisher);
+    this.backplane.addPublisher('CpiomData', this.cpiomDataPublisher);
     this.backplane.addPublisher('InteractivePoints', this.interactivePointsPublisher);
     this.backplane.addPublisher('FmsSymbolsPublisher', this.fmsSymbolsPublisher);
     this.backplane.addPublisher('EgpwcPublisher', this.egpwcPublisher);
@@ -247,11 +262,12 @@ class SystemsHost extends BaseInstrument {
       .handle((now) => {
         const dt = lastUpdateTime === undefined ? 0 : now - lastUpdateTime;
         lastUpdateTime = now;
-
         this.soundManager?.update(dt);
         this.gpws?.update(dt);
         this.fwsCore?.update(dt);
         this.autoThsTrimmer.autoTrim();
+        this.powerPublisher.onUpdate();
+        this.simVarHandling.onUpdate();
       });
 
     this.allFwsFailed.sub((a) => {
@@ -306,6 +322,10 @@ class SystemsHost extends BaseInstrument {
     this.failuresConsumer.register(A380Failure.FwsEcp);
 
     this.backplane.init();
+    this.acr.init();
+    this.atc.init();
+    this.atsu.init();
+    this.simVarHandling.initialize();
   }
 
   public Update(): void {
@@ -319,8 +339,12 @@ class SystemsHost extends BaseInstrument {
       this.failuresConsumer.isActive(A380Failure.Fws2) || this.fws2ResetPbStatus.get() || !this.fws2Powered.get(),
     );
 
-    this.fws1Healthy.set(!this.fws1Failed.get() && this.fws1Powered.get() && this.fwsCore?.startupCompleted.get());
-    this.fws2Healthy.set(!this.fws2Failed.get() && this.fws2Powered.get() && this.fwsCore?.startupCompleted.get());
+    this.fws1Healthy.set(
+      (!this.fws1Failed.get() && this.fws1Powered.get() && this.fwsCore?.startupCompleted.get()) ?? false,
+    );
+    this.fws2Healthy.set(
+      (!this.fws2Failed.get() && this.fws2Powered.get() && this.fwsCore?.startupCompleted.get()) ?? false,
+    );
 
     const ecpNotReachable =
       !SimVar.GetSimVarValue('L:A32NX_AFDX_3_3_REACHABLE', SimVarValueType.Bool) &&
@@ -335,6 +359,8 @@ class SystemsHost extends BaseInstrument {
       const gamestate = this.getGameState();
       if (gamestate === 3) {
         this.hEventPublisher.startPublish();
+        this.powerPublisher.startPublish();
+        this.simVarHandling.startPublish();
       }
       this.gameState = gamestate;
     }

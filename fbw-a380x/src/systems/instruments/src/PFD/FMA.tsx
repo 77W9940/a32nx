@@ -16,7 +16,7 @@ import {
 import { ArmedLateralMode, ArmedVerticalMode, isArmed, LateralMode, VerticalMode } from '@shared/autopilot';
 import { Arinc429Values } from './shared/ArincValueProvider';
 import { PFDSimvars } from './shared/PFDSimvarPublisher';
-import { SimplaneValues } from 'instruments/src/MsfsAvionicsCommon/providers/SimplaneValueProvider';
+import { SimplaneValues } from '../MsfsAvionicsCommon/providers/SimplaneValueProvider';
 import {
   Arinc429ConsumerSubject,
   Arinc429LocalVarConsumerSubject,
@@ -25,8 +25,8 @@ import {
   ArincEventBus,
 } from '@flybywiresim/fbw-sdk';
 import { FcdcValueProvider } from './shared/FcdcValueProvider';
-import { DmcLogicEvents } from 'instruments/src/MsfsAvionicsCommon/providers/DmcPublisher';
-import { FGVars } from 'instruments/src/MsfsAvionicsCommon/providers/FGDataPublisher';
+import { DmcLogicEvents } from '../MsfsAvionicsCommon/providers/DmcPublisher';
+import { FGVars } from '../MsfsAvionicsCommon/providers/FGDataPublisher';
 import { AutoThrustModeMessage } from '@shared/autopilot';
 import { getDisplayIndex } from './PFD';
 
@@ -520,6 +520,7 @@ interface CellProps extends ComponentProps {
 
 class A1A2Cell extends ShowForSecondsComponent<CellProps> {
   private athrMode = 0;
+  private climbDerate = 0;
 
   private cellRef = FSComponent.createRef<SVGGElement>();
 
@@ -610,6 +611,10 @@ class A1A2Cell extends ShowForSecondsComponent<CellProps> {
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR CLB</text>';
         this.displayModeChangedPath();
         break;
+      case 15:
+        text = `<text  class="FontSmall MiddleAlign Green" x="16.782249" y="7.1280665">THR DCLB${this.climbDerate}</text>`;
+        this.displayModeChangedPath();
+        break;
       case 11:
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR LVR</text>';
         this.displayModeChangedPath();
@@ -692,6 +697,14 @@ class A1A2Cell extends ShowForSecondsComponent<CellProps> {
       .whenChanged()
       .handle((athrMode) => {
         this.athrMode = athrMode;
+        this.setText();
+      });
+
+    sub
+      .on('climbDerate')
+      .whenChanged()
+      .handle((climbDerate) => {
+        this.climbDerate = climbDerate;
         this.setText();
       });
 

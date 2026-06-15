@@ -1,58 +1,68 @@
 import { EventBus, FSComponent, Subscribable, VNode } from '@microsoft/msfs-sdk';
-
-// Page imports
-import { MfdFmsDataStatus } from 'instruments/src/MFD/pages/FMS/DATA/MfdFmsDataStatus';
-import { MfdFmsFplnAirways } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnAirways';
-import { MfdFmsFplnArr } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnArr';
-import { MfdFmsFplnDep } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnDep';
-import { MfdFmsFplnDirectTo } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnDirectTo';
-import { MfdFmsFpln } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFpln';
-import { MfdFmsFplnHold } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnHold';
-import { MfdFmsFplnVertRev } from 'instruments/src/MFD/pages/FMS/F-PLN/MfdFmsFplnVertRev';
-import { MfdFmsFuelLoad } from 'instruments/src/MFD/pages/FMS/MfdFmsFuelLoad';
-import { MfdFmsInit } from 'instruments/src/MFD/pages/FMS/MfdFmsInit';
-import { MfdNotFound } from 'instruments/src/MFD/pages/FMS/MfdNotFound';
-import { MfdFmsPerf } from 'instruments/src/MFD/pages/FMS/MfdFmsPerf';
-import { MfdFmsPositionIrs } from 'instruments/src/MFD/pages/FMS/POSITION/MfdFmsPositionIrs';
-import { MfdFmsPositionNavaids } from 'instruments/src/MFD/pages/FMS/POSITION/MfdFmsPositionNavaids';
-import { MfdAtccomConnect } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomConnect';
-import { MfdAtccomMsgRecord } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomMsgRecord';
-import { MfdAtccomMsgRecordAll } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomMsgRecordAll';
-import { MfdAtccomMsgRecordMonitored } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomMsgRecordMonitored';
-import { MfdAtccomMsgRecordExpand } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomMsgRecordExpand';
-import { MfdAtccomDAtis } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomDAtis';
-import { MfdAtccomDAtisReceived } from 'instruments/src/MFD/pages/ATCCOM/MfdAtccomDAtisReceived';
-
-// Header imports
-import { AtccomHeader } from 'instruments/src/MFD/pages/common/AtccomHeader';
-import { FcuBkupHeader } from 'instruments/src/MFD/pages/common/FcuBkupHeader';
-import { FmsHeader } from 'instruments/src/MFD/pages/common/FmsHeader';
-import { SurvHeader } from 'instruments/src/MFD/pages/common/SurvHeader';
-import { FmcServiceInterface } from 'instruments/src/MFD/FMC/FmcServiceInterface';
-import { FmsDisplayInterface } from '@fmgc/flightplanning/interface/FmsDisplayInterface';
-import { MfdDisplayInterface } from 'instruments/src/MFD/MFD';
-import { MfdUiService } from 'instruments/src/MFD/pages/common/MfdUiService';
-import { MfdSurvControls } from 'instruments/src/MFD/pages/SURV/MfdSurvControls';
-import { MfdFmsFplnFixInfo } from './pages/FMS/F-PLN/MfdFmsFplnFixInfo';
-import { MfdFmsPositionMonitor } from './pages/FMS/POSITION/MfdFmsPositionMonitor';
-import { MfdSurvStatusSwitching } from 'instruments/src/MFD/pages/SURV/MfdSurvStatusSwitching';
-import { MfdFmsDataAirport } from 'instruments/src/MFD/pages/FMS/DATA/MfdFmsDataAirport';
-import { AtcDatalinkSystem } from './ATCCOM/AtcDatalinkSystem';
 import {
-  activeFlightPlanFuelAndLoadUri,
-  fuelAndLoadPage,
-  activeFlightPlanPageUri,
+  fmsActivePagePrefix,
+  fmsSec1PagePrefix,
+  fmsSec2PagePrefix,
+  fmsSec3PagePrefix,
   flightPlanUriPage,
-  activeFlightPlanHoldUri,
   lateralRevisionHoldPage,
   dataStatusUri,
+  fuelAndLoadPage,
   performancePage,
   initPage,
+  verticalRevisionPage,
+  departurePage,
+  arrivalPage,
+  airwaysPage,
+  secIndexPageUri,
+  windPage,
+  activeFlightPlanPageUri,
+  activeFlightPlanFuelAndLoadUri,
+  activeFlightPlanHoldUri,
   fixInfoUri,
   dirToUri,
-  secIndexPageUri,
 } from './shared/utils';
+
+// Page imports
+import { MfdFmsDataStatus } from './pages/FMS/DATA/MfdFmsDataStatus';
+import { MfdFmsFplnAirways } from './pages/FMS/F-PLN/MfdFmsFplnAirways';
+import { MfdFmsFplnArr } from './pages/FMS/F-PLN/MfdFmsFplnArr';
+import { MfdFmsFplnDep } from './pages/FMS/F-PLN/MfdFmsFplnDep';
+import { MfdFmsFplnDirectTo } from './pages/FMS/F-PLN/MfdFmsFplnDirectTo';
+import { MfdFmsFpln } from './pages/FMS/F-PLN/MfdFmsFpln';
+import { MfdFmsFplnHold } from './pages/FMS/F-PLN/MfdFmsFplnHold';
+import { MfdFmsFplnVertRev } from './pages/FMS/F-PLN/MfdFmsFplnVertRev';
+import { MfdFmsFuelLoad } from './pages/FMS/MfdFmsFuelLoad';
+import { MfdFmsInit } from './pages/FMS/MfdFmsInit';
+import { MfdNotFound } from './pages/FMS/MfdNotFound';
+import { MfdFmsPerf } from './pages/FMS/MfdFmsPerf';
+import { MfdFmsPositionIrs } from './pages/FMS/POSITION/MfdFmsPositionIrs';
+import { MfdFmsPositionNavaids } from './pages/FMS/POSITION/MfdFmsPositionNavaids';
+import { MfdAtccomConnect } from './pages/ATCCOM/MfdAtccomConnect';
+import { MfdAtccomMsgRecord } from './pages/ATCCOM/MfdAtccomMsgRecord';
+import { MfdAtccomMsgRecordAll } from './pages/ATCCOM/MfdAtccomMsgRecordAll';
+import { MfdAtccomMsgRecordMonitored } from './pages/ATCCOM/MfdAtccomMsgRecordMonitored';
+import { MfdAtccomMsgRecordExpand } from './pages/ATCCOM/MfdAtccomMsgRecordExpand';
+import { MfdAtccomDAtis } from './pages/ATCCOM/MfdAtccomDAtis';
+import { MfdAtccomDAtisReceived } from './pages/ATCCOM/MfdAtccomDAtisReceived';
+
+// Header imports
+import { AtccomHeader } from './pages/common/AtccomHeader';
+import { FcuBkupHeader } from './pages/common/FcuBkupHeader';
+import { FmsHeader } from './pages/common/FmsHeader';
+import { SurvHeader } from './pages/common/SurvHeader';
+import { FmcServiceInterface } from './FMC/FmcServiceInterface';
+import { FmsDisplayInterface } from '@fmgc/flightplanning/interface/FmsDisplayInterface';
+import { MfdDisplayInterface } from './MFD';
+import { MfdUiService } from './pages/common/MfdUiService';
+import { MfdSurvControls } from './pages/SURV/MfdSurvControls';
+import { MfdFmsFplnFixInfo } from './pages/FMS/F-PLN/MfdFmsFplnFixInfo';
+import { MfdFmsPositionMonitor } from './pages/FMS/POSITION/MfdFmsPositionMonitor';
+import { MfdSurvStatusSwitching } from './pages/SURV/MfdSurvStatusSwitching';
+import { MfdFmsDataAirport } from './pages/FMS/DATA/MfdFmsDataAirport';
+import { AtcDatalinkSystem } from './ATCCOM/AtcDatalinkSystem';
 import { MfdFmsSecIndex } from './pages/FMS/SEC/MfdFmsSecIndex';
+import { MfdFmsWindPage } from './pages/FMS/MfdFmsWindPage';
 
 export function pageForUrl(
   url: string,
@@ -62,10 +72,10 @@ export function pageForUrl(
   atcService: AtcDatalinkSystem,
 ): VNode {
   switch (url) {
-    case 'fms/active/' + performancePage:
-    case 'fms/sec1/' + performancePage:
-    case 'fms/sec2/' + performancePage:
-    case 'fms/sec3/' + performancePage:
+    case fmsActivePagePrefix + performancePage:
+    case fmsSec1PagePrefix + performancePage:
+    case fmsSec2PagePrefix + performancePage:
+    case fmsSec3PagePrefix + performancePage:
       return (
         <MfdFmsPerf
           pageTitle="PERF"
@@ -75,10 +85,10 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
-    case 'fms/active/' + initPage:
-    case 'fms/sec1/' + initPage:
-    case 'fms/sec2/' + initPage:
-    case 'fms/sec3/' + initPage:
+    case fmsActivePagePrefix + initPage:
+    case fmsSec1PagePrefix + initPage:
+    case fmsSec2PagePrefix + initPage:
+    case fmsSec3PagePrefix + initPage:
       return (
         <MfdFmsInit
           pageTitle="INIT"
@@ -88,10 +98,23 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
+    case fmsActivePagePrefix + windPage:
+    case fmsSec1PagePrefix + windPage:
+    case fmsSec2PagePrefix + windPage:
+      return (
+        <MfdFmsWindPage
+          pageTitle="WIND"
+          bus={bus}
+          mfd={mfd}
+          fmcService={fmcService}
+          flightPlanInterface={fmcService.master.flightPlanInterface}
+        />
+      );
+    case fmsActivePagePrefix + fuelAndLoadPage:
     case activeFlightPlanFuelAndLoadUri:
-    case 'fms/sec1/' + fuelAndLoadPage:
-    case 'fms/sec2/' + fuelAndLoadPage:
-    case 'fms/sec3/' + fuelAndLoadPage:
+    case fmsSec1PagePrefix + fuelAndLoadPage:
+    case fmsSec2PagePrefix + fuelAndLoadPage:
+    case fmsSec3PagePrefix + fuelAndLoadPage:
       return (
         <MfdFmsFuelLoad
           pageTitle="FUEL&LOAD"
@@ -102,9 +125,9 @@ export function pageForUrl(
         />
       );
     case activeFlightPlanPageUri:
-    case 'fms/sec1/' + flightPlanUriPage:
-    case 'fms/sec2/' + flightPlanUriPage:
-    case 'fms/sec3/' + flightPlanUriPage:
+    case fmsSec1PagePrefix + flightPlanUriPage:
+    case fmsSec2PagePrefix + flightPlanUriPage:
+    case fmsSec3PagePrefix + flightPlanUriPage:
       return (
         <MfdFmsFpln
           pageTitle="F-PLN"
@@ -114,10 +137,10 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
-    case 'fms/active/f-pln-airways':
-    case 'fms/sec1/f-pln-airways':
-    case 'fms/sec2/f-pln-airways':
-    case 'fms/sec3/f-pln-airways':
+    case fmsActivePagePrefix + airwaysPage:
+    case fmsSec1PagePrefix + airwaysPage:
+    case fmsSec2PagePrefix + airwaysPage:
+    case fmsSec3PagePrefix + airwaysPage:
       return (
         <MfdFmsFplnAirways
           pageTitle="F-PLN/AIRWAYS"
@@ -127,10 +150,10 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
-    case 'fms/active/f-pln-departure':
-    case 'fms/sec1/f-pln-departure':
-    case 'fms/sec2/f-pln-departure':
-    case 'fms/sec3/f-pln-departure':
+    case fmsActivePagePrefix + departurePage:
+    case fmsSec1PagePrefix + departurePage:
+    case fmsSec2PagePrefix + departurePage:
+    case fmsSec3PagePrefix + departurePage:
       return (
         <MfdFmsFplnDep
           pageTitle="F-PLN/DEPARTURE"
@@ -140,10 +163,10 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
-    case 'fms/active/f-pln-arrival':
-    case 'fms/sec1/f-pln-arrival':
-    case 'fms/sec2/f-pln-arrival':
-    case 'fms/sec3/f-pln-arrival':
+    case fmsActivePagePrefix + arrivalPage:
+    case fmsSec1PagePrefix + arrivalPage:
+    case fmsSec2PagePrefix + arrivalPage:
+    case fmsSec3PagePrefix + arrivalPage:
       return (
         <MfdFmsFplnArr
           pageTitle="F-PLN/ARRIVAL"
@@ -163,10 +186,10 @@ export function pageForUrl(
           flightPlanInterface={fmcService.master.flightPlanInterface}
         />
       );
-    case 'fms/active/f-pln-vert-rev':
-    case 'fms/sec1/f-pln-vert-rev':
-    case 'fms/sec2/f-pln-vert-rev':
-    case 'fms/sec3/f-pln-vert-rev':
+    case fmsActivePagePrefix + verticalRevisionPage:
+    case fmsSec1PagePrefix + verticalRevisionPage:
+    case fmsSec2PagePrefix + verticalRevisionPage:
+    case fmsSec3PagePrefix + verticalRevisionPage:
       return (
         <MfdFmsFplnVertRev
           pageTitle="F-PLN/VERT REV"
@@ -177,9 +200,9 @@ export function pageForUrl(
         />
       );
     case activeFlightPlanHoldUri:
-    case 'fms/sec1/' + lateralRevisionHoldPage:
-    case 'fms/sec2/' + lateralRevisionHoldPage:
-    case 'fms/sec3/' + lateralRevisionHoldPage:
+    case fmsSec1PagePrefix + lateralRevisionHoldPage:
+    case fmsSec2PagePrefix + lateralRevisionHoldPage:
+    case fmsSec3PagePrefix + lateralRevisionHoldPage:
       return (
         <MfdFmsFplnHold
           pageTitle="F-PLN/HOLD"
