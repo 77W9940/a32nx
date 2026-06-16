@@ -11,6 +11,7 @@
 
 #define FILENAME_FADEC_CONF_DIRECTORY "\\work\\AircraftStates\\"
 #define FILENAME_FADEC_CONF_FILE_EXTENSION ".ini"
+#define FILENAME_ENGINE_HOURS "\\work\\A380_ENGINE_HOURS.txt"
 
 /**
  * @class EngineControl_A380X
@@ -66,6 +67,15 @@ class EngineControl_A380X {
 
   // Engine oil state
   double thermalEnergy[4] = {0.0, 0.0, 0.0, 0.0};
+
+  // Per-engine manufacturing health (lower = less wear = lower N3, cascades to N2/N1/FF/EGT)
+  double engineHealth[4] = {1.0, 1.0, 1.0, 1.0};
+
+  // Per-engine flight hours tracking (persisted to file, drives wear)
+  double engineFlightHours[4] = {0.0, 0.0, 0.0, 0.0};
+  double lastEngineHoursSaveTime = 0.0;
+  static constexpr double ENGINE_HOURS_SAVE_INTERVAL = 60.0;
+  static constexpr double ENGINE_WEAR_RATE = 1e-6;
 
   // additional constants
   static constexpr int    MAX_OIL             = 200;
