@@ -10,10 +10,11 @@ import {
   Subscribable,
   VNode,
 } from '@microsoft/msfs-sdk';
-import { EfisNdMode } from '@flybywiresim/fbw-sdk';
+import { EfisNdMode, EfisSide } from '@flybywiresim/fbw-sdk';
 
 export interface BingMapWxrOverlayProps {
   visible: Subscribable<boolean>;
+  side: EfisSide;
   centerLat: Subscribable<number>;
   centerLong: Subscribable<number>;
   yBias: Subscribable<number>;
@@ -57,12 +58,12 @@ export class BingMapWxrOverlay extends DisplayComponent<BingMapWxrOverlayProps> 
         return;
       }
 
-      this.mapRef.instance.setBingId('a380x_wxr');
-      this.mapRef.instance.setVisible(false);
       svgMapConfig.generateBingMap(this.mapRef.instance);
       this.mapRef.instance.setConfig(0);
       this.mapRef.instance.setMode(EBingMode.PLANE);
       this.mapRef.instance.setReference(EBingReference.SEA);
+      this.mapRef.instance.setBingId(`a380x_wxr_${this.props.side}`);
+      this.mapRef.instance.setVisible(false);
       this.isInit = true;
 
       this.updateMapParams();

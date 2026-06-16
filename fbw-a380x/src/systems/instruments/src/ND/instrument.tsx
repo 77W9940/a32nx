@@ -393,9 +393,10 @@ class NDInstrument implements FsInstrument {
       }
     });
 
-    sub.on('a380x_efis_cp_active_overlay').handle((overlay: number) => {
-      this.bus.getPublisher<NDControlEvents>().pub('set_weather_radar_visible', overlay === 1, true, false);
-    });
+    setInterval(() => {
+      const overlay = SimVar.GetSimVarValue(`L:A380X_EFIS_${this.efisSide}_ACTIVE_OVERLAY`, 'number');
+      this.bus.getPublisher<NDControlEvents>().pub('set_weather_radar_visible', overlay === 1, false, false);
+    }, 200);
   }
 
   private updateNdOansVisibility() {

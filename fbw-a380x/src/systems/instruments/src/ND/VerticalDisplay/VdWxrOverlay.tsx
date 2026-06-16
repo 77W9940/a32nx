@@ -10,8 +10,10 @@ import {
   Subscribable,
   VNode,
 } from '@microsoft/msfs-sdk';
+import { EfisSide } from '@flybywiresim/fbw-sdk';
 
 export interface VdWxrOverlayProps {
+  side: EfisSide;
   wxrVisible: Subscribable<boolean>;
   centerLat: Subscribable<number>;
   centerLong: Subscribable<number>;
@@ -45,7 +47,7 @@ export class VdWxrOverlay extends DisplayComponent<VdWxrOverlayProps> {
 
   private readonly h = 200;
 
-  private static readonly WXR_CONE = Math.PI;
+  private static readonly WXR_CONE = 4 * Math.PI;
 
   private static readonly DEFAULT_WXR_COLORS: [number, number][] = [
     [0x00000000, 0.5],
@@ -75,7 +77,7 @@ export class VdWxrOverlay extends DisplayComponent<VdWxrOverlayProps> {
 
   private registerListener(): void {
     if (this.isListenerRegistered) return;
-    this.mapListener = RegisterViewListener('JS_LISTENER_MAPS', this.onListenerRegistered.bind(this), false);
+    this.mapListener = RegisterViewListener('JS_LISTENER_MAPS', this.onListenerRegistered.bind(this));
   }
 
   private onListenerRegistered(): void {
@@ -83,11 +85,11 @@ export class VdWxrOverlay extends DisplayComponent<VdWxrOverlayProps> {
     this.mapListener.on('MapBinded', this.onListenerBound.bind(this));
     this.mapListener.on('MapUpdated', this.onMapUpdate.bind(this));
     this.isListenerRegistered = true;
-    this.mapListener.trigger('JS_BIND_BINGMAP', 'a380x_vd_wxr', 0);
+    this.mapListener.trigger('JS_BIND_BINGMAP', `a380x_vd_wxr_${this.props.side}`, 0);
   }
 
   private onListenerBound(binder: { friendlyName: string; is3D: boolean }, uid: number): void {
-    if (this.isDestroyed || binder.friendlyName !== 'a380x_vd_wxr') return;
+    if (this.isDestroyed || binder.friendlyName !== `a380x_vd_wxr_${this.props.side}`) return;
     this.uid = uid;
     this.isBound = true;
 
@@ -154,6 +156,7 @@ export class VdWxrOverlay extends DisplayComponent<VdWxrOverlayProps> {
 
     if (this.isBound) {
       Coherent.call('SET_MAP_PARAMS', this.uid, this.pos, this.radius);
+      Coherent.call('SET_MAP_ALTITUDE_RANGE', this.uid, 0, 60000);
     }
   }
 

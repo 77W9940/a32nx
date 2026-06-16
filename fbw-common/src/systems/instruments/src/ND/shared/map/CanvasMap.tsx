@@ -16,6 +16,7 @@ import {
 } from '@microsoft/msfs-sdk';
 import {
   EfisNdMode,
+  EfisSide,
   EfisVectorsGroup,
   NdSymbol,
   NdSymbolTypeFlags,
@@ -68,6 +69,7 @@ const NO_DASHES = [];
 
 export interface CanvasMapProps {
   bus: EventBus;
+  side?: EfisSide;
   x: Subscribable<number>;
   y: Subscribable<number>;
   options?: Partial<MapOptions>;
@@ -560,6 +562,7 @@ export class CanvasMap extends DisplayComponent<CanvasMapProps> {
         />
         <BingMapWxrOverlay
           visible={this.weatherRadarVisible}
+          side={this.props.side ?? 'L'}
           centerLat={this.mapCenterLat}
           centerLong={this.mapCenterLong}
           yBias={this.mapCenterYBias}

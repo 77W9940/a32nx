@@ -320,6 +320,7 @@ export class VerticalDisplayCanvasMap extends DisplayComponent<VerticalDisplayCa
         />
         <div style="position: absolute; top: 800px; left: 150px; width: 540px; height: 200px;">
           <VdWxrOverlay
+            side={this.props.side}
             wxrVisible={this.props.wxrVisible}
             centerLat={this.props.wxrCenterLat}
             centerLong={this.props.wxrCenterLong}
