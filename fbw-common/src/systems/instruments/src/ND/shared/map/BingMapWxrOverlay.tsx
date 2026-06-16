@@ -21,7 +21,7 @@ export interface BingMapWxrOverlayProps {
   ndMode: Subscribable<EfisNdMode>;
 }
 
-const ROSE_CLIP = 'rect(130px, 878px, 636px, 0px)';
+const ROSE_CLIP = 'rect(246px, 990px, 900px, 0px)';
 
 const RANGE_CONSTANT = 1852;
 
@@ -100,7 +100,7 @@ export class BingMapWxrOverlay extends DisplayComponent<BingMapWxrOverlayProps> 
     if (mode === EfisNdMode.PLAN) {
       this.wrapperStyle.set('display: none;');
     } else if (mode === EfisNdMode.ARC) {
-      this.wrapperStyle.set(`display: block; position: absolute; top: ${yBias - 35}px; left: 0; width: 768px; height: 768px; ${blend} clip: auto;`);
+      this.wrapperStyle.set(`display: block; position: absolute; top: 128px; left: -111px; width: 990px; height: 990px; ${blend} clip: unset;`);
     } else {
       this.wrapperStyle.set(`display: block; position: absolute; top: -115px; left: -110px; width: 990px; height: 990px; ${blend} clip: ${ROSE_CLIP};`);
     }
