@@ -392,6 +392,10 @@ class NDInstrument implements FsInstrument {
         this.bus.getPublisher<InternalKccuKeyEvent>().pub('kccuKeyEvent', [this.efisSide, key]);
       }
     });
+
+    sub.on('a380x_efis_cp_active_overlay').handle((overlay: number) => {
+      this.bus.getPublisher<NDControlEvents>().pub('set_weather_radar_visible', overlay === 1, true, false);
+    });
   }
 
   private updateNdOansVisibility() {

@@ -39,6 +39,7 @@ import { PseudoWaypointLayer } from './PseudoWaypointLayer';
 import { GenericFcuEvents } from '../../types/GenericFcuEvents';
 import { MapOptions } from '../../types/MapOptions';
 import { GenericTawsEvents } from '../../types/GenericTawsEvents';
+import { BingMapWxrOverlay } from './BingMapWxrOverlay';
 
 // TODO move this somewhere better, need to move TCAS stuff into fbw-sdk
 enum TaRaIntrusion {
@@ -129,6 +130,8 @@ export class CanvasMap extends DisplayComponent<CanvasMapProps> {
 
   private readonly trafficLayer = new TrafficLayer(this);
 
+  private readonly weatherRadarVisible = Subject.create<boolean>(false);
+
   private lastFrameTimestamp: number = 0;
 
   onAfterRender(node: VNode) {
@@ -144,6 +147,7 @@ export class CanvasMap extends DisplayComponent<CanvasMapProps> {
     sub.on('set_map_up_course').handle((v) => this.mapRotation.set(v));
     sub.on('set_map_pixel_radius').handle((v) => this.mapPixelRadius.set(v));
     sub.on('set_map_range_radius').handle((v) => this.mapRangeRadius.set(v));
+    sub.on('set_weather_radar_visible').handle((visible) => this.weatherRadarVisible.set(visible));
 
     sub
       .on('ndMode')
@@ -553,6 +557,14 @@ export class CanvasMap extends DisplayComponent<CanvasMapProps> {
             this.props.x,
             this.props.y,
           )}
+        />
+        <BingMapWxrOverlay
+          visible={this.weatherRadarVisible}
+          centerLat={this.mapCenterLat}
+          centerLong={this.mapCenterLong}
+          yBias={this.mapCenterYBias}
+          range={this.mapRangeRadius}
+          ndMode={this.mapMode as Subscribable<EfisNdMode>}
         />
         <div
           ref={this.touchContainerRef}

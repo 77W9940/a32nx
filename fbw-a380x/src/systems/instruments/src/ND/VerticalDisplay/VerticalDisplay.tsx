@@ -319,6 +319,14 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
   private readonly terrSysOff = ConsumerSubject.create(this.sub.on('a32nx_aesu_terr_sys_off'), false);
   private readonly activeOverlay = ConsumerSubject.create(this.sub.on('a380x_efis_cp_active_overlay'), 0);
 
+  private readonly pposLat = Arinc429LocalVarConsumerSubject.create(this.sub.on('latitude'));
+  private readonly pposLon = Arinc429LocalVarConsumerSubject.create(this.sub.on('longitude'));
+
+  private readonly pposLatValue = MappedSubject.create(([lat]) => lat.valueOr(0), this.pposLat);
+  private readonly pposLonValue = MappedSubject.create(([lon]) => lon.valueOr(0), this.pposLon);
+
+  private readonly wxrVisible = this.activeOverlay.map((v) => v === 1);
+
   private readonly rangeChangeFlagCondition = MappedSubject.create(
     ([flagShown, flagReason]) =>
       flagShown &&
@@ -466,6 +474,11 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
       this.wxrTawsSysSelected,
       this.terrSysOff,
       this.activeOverlay,
+      this.pposLat,
+      this.pposLon,
+      this.pposLatValue,
+      this.pposLonValue,
+      this.wxrVisible,
       this.rangeChangeFlagCondition,
       this.modeChangeFlagCondition,
       this.noTerrAndWxDataAvailFlagCondition,
@@ -606,6 +619,9 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
           shouldShowTrackLine={this.shouldShowTrackLine}
           fpa={this.fpa}
           selectedAltitude={this.selectedAltitude}
+          wxrVisible={this.wxrVisible}
+          wxrCenterLat={this.pposLatValue}
+          wxrCenterLong={this.pposLonValue}
         />
         <svg
           ref={this.labelSvgRef}
@@ -754,14 +770,6 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
             style={{ visibility: this.terrInopFlagVisibility }}
           >
             TERR INOP
-          </text>
-          <text
-            x={565}
-            y={960}
-            class="Amber FontSmall MiddleAlign shadow"
-            style={{ visibility: this.wxrInopFlagVisibility }}
-          >
-            WXR INOP
           </text>
           <text
             x={422}

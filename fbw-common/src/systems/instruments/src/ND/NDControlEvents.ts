@@ -82,4 +82,9 @@ export interface NDControlEvents {
    * Event for the CHRONO button being pushed
    */
   chrono_pushed: void;
+
+  /**
+   * Sets the weather radar visibility on the ND
+   */
+  set_weather_radar_visible: boolean;
 }
