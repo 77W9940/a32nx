@@ -10,15 +10,15 @@
 <!--  1. [Changed Area] Title of changes - @github username (Name)  -->
 <!-- The changed area should be prefixed with "A32NX/" or "A380X/" if only one of them is affected. -->
 
-<<<<<<< HEAD
 ## 2024.2.0
 
 1. [ATSU] Add support for BeyondATC and SayIntentions AI as METAR/ATIS sources - @saschl
 1. [A32NX/TCAS] Improve PFD Resolution Advisory graphics, introduce TCAS bus - @lukecologne (luke)
+1. [PFD] Reduced size of white FMA messages on PFD - @BravoMike99 (bruno_pt99)
 1. [A380X] Update aircraft to MSFS2024 native modular aircraft - @heclak (Heclak)
-1. [A380X/MODEL] Performance optimization of 3d model with reduced draw calls - @heclak (Heclak)
+1. [A380X/MODEL] Performance optimization of 3D model with reduced draw calls - @heclak (Heclak)
 1. [A380X/MODEL] VRAM usage reduction with texture optimization and use of mipmaps for lower spec systems - @heclak (Heclak)
-1. [A380X/MODEL] Add new cabinless variant added for better performance on low spec systems - @heclak (Heclak)
+1. [A380X/MODEL] Add new cabinless variant for better performance on low spec systems - @heclak (Heclak)
 1. [A380X/MODEL] Add parallax windows on cabinless variant based on cabin layout - @heclak (Heclak)
 1. [A380X/MODEL] Update windshield texture to be cleaner - @heclak (Heclak)
 1. [A380X/MODEL] Update windshield to use 2024 rain and wiper effects - @heclak (Heclak)
@@ -31,13 +31,13 @@
 1. [A380X/MODEL] Add window plugs to windows - @heclak (Heclak)
 1. [A380X/MODEL] Add ability to hide the sidestick for better visibility of the OIT - @heclak (Heclak)
 1. [A380X/LIGHTS] Add cockpit reading lights - @heclak (Heclak)
-1. [A380X/MODEL] Add ability to hide sidestick for better view of OIT - @heclak (Heclak)
-1. [A380X] Fix aircraft rolling off the taxiway in ready screen when using a runway start - @heclak (Heclak)
+1. [A380X] Fix aircraft rolling off the taxiway in the ready screen when using a runway start - @heclak (Heclak)
+1. [A380X/MODEL] Improve clickspots on throttle levers to make it easier to click on nearby objects - @heclak (Heclak)
+1. [A380X/MODEL] Fix OIT backlighting wrongly connected to MFD backlighting - @heclak (Heclak)
+1. [A380X/ECAM] Add RELIGHT IN FLIGHT, TAILPIPE FIRE, VOLCANIC ASH ENCOUNTER, BOMB ON BOARD and SEVERE TURBULENCE abnormal non-sensed checklists  - @Jonny23787 (Jonathan)
+1. [A380X/MFD] Worked around a sim bug where the right side cursor was sometimes oriented incorrectly - @tracernz (Mike)
 
 ## 2024.1.0
-=======
-## 2020.15.0
->>>>>>> pr/10652
 
 1. [OVHD] Implement FAULT light flickering during self-test sequence of PRIM, SEC, ELAC, FAC - @flogross89 (floridude)
 1. [A32NX/SFCC] Added implementation of SAP and FAP in SFCC - @Eagle941 (Joe)
@@ -158,7 +158,6 @@
 1. [A32NX/FWS] Fixed Radio altimeter callouts being overfly sensitive to terrain changes - @BravoMike99 (bruno_pt99), @lukecologne (luke)
 1. [A32NX/FWS] Added Five Hundred callout only not on glide option - @BravoMike99 (bruno_pt99)
 1. [A32NX] Split navigation lights into two separate systems - @tracernz (Mike)
-<<<<<<< HEAD
 1. [A380X/FG] Fixed autopilot managed speed target not limited by characteristic speeds outside of approach - @BravoMike99 (bruno_pt99)
 1. [A32NX/EFB] Skip the departure change checklist in efb - @Lucas-IQ21 (Lucas)
 1. [A32NX/FWS] Add `GEAR NOT UPLOCKED` master caution - @FozzieHi (fozzie)
@@ -176,8 +175,6 @@
 1. [EFB] Add FAA and LIDO charts supplied by MSFS2024 - @tracernz (Mike)
 1. [EFB] Added a cold temperature correction calculator - @tracernz (Mike)
 1. [A32NX/FLIGHT MODEL] Updated A32NX flight model for MSFS 2024 - @donstim (donbikes)
-=======
->>>>>>> pr/10652
 
 ## 0.14.0
 

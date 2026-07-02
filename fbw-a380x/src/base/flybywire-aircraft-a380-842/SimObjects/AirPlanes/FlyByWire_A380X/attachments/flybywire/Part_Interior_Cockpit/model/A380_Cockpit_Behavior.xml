@@ -5,7 +5,7 @@
 
 <ModelInfo>
 	<Behaviors>
-        <Include Path="A380X\id_definitions.xml" />
+        <Include Path="fbw_a380x\id_definitions.xml" />
 
         <!-- Legacy includes -->
         <Include RelativeFile="behaviour\legacy\Interior\A32NX_Interior_Includes.xml" />
@@ -31,7 +31,6 @@
         <Include RelativeFile="behaviour\overhead\reset.xml" />
         <Include RelativeFile="behaviour\pedestal\pedestal-inputs.xml" />
         <Include RelativeFile="behaviour\pedestal\pedestal.xml" />
-        <Include RelativeFile="behaviour\door_animations.xml" />
         <Include RelativeFile="behaviour\efis-cp.xml" />
         <Include RelativeFile="behaviour\ecam-cp.xml" />
         <Include RelativeFile="behaviour\fcu.xml" />
@@ -90,9 +89,6 @@
         <Component ID="INTERACTIVE_PARTS">
             <UseTemplate Name="FBW_A380X_Components_InteractiveParts" />
         </Component>
-        <!-- <Component ID="DOOR_ANIMATIONS_COCKPIT">
-            <UseTemplate Name="FBW_A380X_Components_DoorAnimations" />
-        </Component> -->
         <Component ID="MIP">
             <UseTemplate Name="FBW_A380X_Components_MIP" />
         </Component>
@@ -354,7 +350,6 @@
                 </Component>
             </Component>
 
-            <!-- FIXME backlight missing -->
             <!-- OIT_L -->
             <Component ID="OITL">
                 <Component ID="SCREEN_OITL">
@@ -363,10 +358,14 @@
                         <POTENTIOMETER>@POT_EFIS_CS_OIT</POTENTIOMETER>
                         <EMISSIVE_CODE>(L:A32NX_ELEC_AC_2_BUS_IS_POWERED, Bool)</EMISSIVE_CODE>
                     </UseTemplate>
+                    <UseTemplate Name="ASOBO_GT_Component_Emissive_Gauge">
+                        <NODE_ID>SCREEN_BACKLIGHT_DU_OITL</NODE_ID>
+                        <POTENTIOMETER>@POT_EFIS_CS_OIT</POTENTIOMETER>
+                        <EMISSIVE_CODE>(L:A32NX_ELEC_AC_2_BUS_IS_POWERED, Bool) 5 *</EMISSIVE_CODE>
+                    </UseTemplate>
                 </Component>
             </Component>
 
-            <!-- FIXME backlight missing -->
             <!-- OIT_R -->
             <Component ID="OITR">
                 <Component ID="SCREEN_OITR">
@@ -374,6 +373,11 @@
                         <NODE_ID>SCREEN_OIT_RIGHT</NODE_ID>
                         <POTENTIOMETER>@POT_EFIS_FO_OIT</POTENTIOMETER>
                         <EMISSIVE_CODE>(L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED, Bool)</EMISSIVE_CODE>
+                    </UseTemplate>
+                    <UseTemplate Name="ASOBO_GT_Component_Emissive_Gauge">
+                        <NODE_ID>SCREEN_BACKLIGHT_DU_OITR</NODE_ID>
+                        <POTENTIOMETER>@POT_EFIS_FO_OIT</POTENTIOMETER>
+                        <EMISSIVE_CODE>(L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED, Bool) 5 *</EMISSIVE_CODE>
                     </UseTemplate>
                 </Component>
             </Component>
