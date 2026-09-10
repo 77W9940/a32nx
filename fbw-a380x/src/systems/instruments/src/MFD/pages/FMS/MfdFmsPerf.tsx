@@ -2106,7 +2106,7 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
                     <span class="mfd-label mfd-spacing-right">DERATED CLB</span>
                     <DropdownMenu
                       values={ArraySubject.create(['NONE', '01', '02', '03', '04', '05'])}
-                      inactive={Subject.create(true)}
+                      inactive={this.clbPageInactive}
                       selectedIndex={this.climbDerated as Subscribable<ClimbDerated>}
                       onModified={(v) =>
                         this.props.flightPlanInterface.setPerformanceData(
