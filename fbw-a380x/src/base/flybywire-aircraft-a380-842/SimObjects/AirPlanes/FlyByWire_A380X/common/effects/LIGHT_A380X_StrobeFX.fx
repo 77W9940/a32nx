@@ -72,7 +72,7 @@ Intensity=4712.389
 Softness=1.0
 SpotInner=20.0
 SpotOuter=100.0
-Volumetric=0
+Volumetric=1
 ScatDir=0.0
 
 [Emitter.1]
@@ -137,6 +137,5 @@ Intensity=4712.389
 Softness=1.0
 SpotInner=20.0
 SpotOuter=100.0
-Volumetric=0
+Volumetric=1
 ScatDir=0.0
-

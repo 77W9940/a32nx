@@ -526,35 +526,16 @@ export interface FlightPlanInterface<P extends FlightPlanPerformanceData = Fligh
   insertWindUplink(planIndex: number): Promise<void>;
 
   /**
-   * Get the climb wind entries for a flight plan. If it is the active and draft entries exist, draft entries will be returned.
-   * @param planIndex plan index to get the climb wind entries for
+   * If the aircraft is before the engine out branch point in the active plan,
+   * creates a TMPY plan from the active with the EOSID inserted in place of the SID,
+   * and the destination set to the origin airport.
+   * @returns True if the EOSID TMPY was created.
    */
-  getClimbWindEntries(planIndex: number): FlightPlanWindEntry[];
+  tryActivateEngineOutSid(): Promise<boolean>;
 
   /**
-   * Get the descent wind entries for a flight plan. If it is the active and draft entries exist, draft entries will be returned.
-   * @param planIndex plan index to get the descent wind entries for
+   * If there is a temporary flight plan created by activating the engine out SID, it is erased.
+   * @returns Whether a EOSID temporary plan was erased.
    */
-  getDescentWindEntries(planIndex: number): FlightPlanWindEntry[];
-
-  /**
-   * Get the alternate wind for a flight plan. If it is the active and a draft entry exists, the draft entry will be returned.
-   * @param planIndex plan index to get the alternate wind for
-   */
-  getAlternateWind(planIndex: number): WindVector | null;
-
-  /**
-   * Indicates whether there are draft wind entries that have not yet been inserted into the active flight plan.
-   */
-  hasDraftWinds(): boolean;
-
-  /**
-   * Inserts the draft wind entries into the active flightplan.
-   */
-  insertDraftWindEntries(): void;
-
-  /**
-   * Deletes the pending draft wind entries.
-   */
-  deleteDraftWindEntries(): void;
+  tryEraseEngineOutSid(): Promise<boolean>;
 }

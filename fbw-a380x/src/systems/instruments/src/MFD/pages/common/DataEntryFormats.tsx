@@ -1,15 +1,6 @@
 //  Copyright (c) 2024-2025-2026 FlyByWire Simulations
 //  SPDX-License-Identifier: GPL-3.0
-import {
-  MappedSubject,
-  Subject,
-  Subscribable,
-  SubscribableUtils,
-  Subscription,
-  Unit,
-  UnitFamily,
-  UnitType,
-} from '@microsoft/msfs-sdk';
+import { MappedSubject, Subject, Subscribable, Subscription, Unit, UnitFamily, UnitType } from '@microsoft/msfs-sdk';
 import { Fix } from '@flybywiresim/fbw-sdk';
 import { FmsError, FmsErrorType } from '@fmgc/FmsError';
 import { Mmo, maxCertifiedAlt } from '@shared/PerformanceConstants';
@@ -39,40 +30,8 @@ function getFormattedFormatError(format: string, unit?: string): A380FmsError {
     FORMAT_ERROR_DETAILS_MESSAGE.replace(FORMAT, format).replace(ERROR_UNIT, unit ? ` ${unit}` : ''),
   );
 }
-
-function parseFlightLevel(input: string, minValue: number, maxValue: number): number | null {
-  if (input === '') {
-    return null;
-  }
-
-  // Accept "FL" followed by 1 to 3 digits, e.g. "FL30" or "FL300"
-  let nbr: number = Number(input);
-  if (Number.isNaN(nbr)) {
-    const flMatch = input.match(/^FL(\d{1,3})$/i);
-    if (flMatch) {
-      nbr = Number(flMatch[1]);
-    }
-  }
-
-  if (nbr > maxValue || nbr < minValue) {
-    throw new A380FmsError(FmsErrorType.EntryOutOfRange);
-  } else if (Number.isNaN(nbr)) {
-    throw getFormattedFormatError('FL XXX');
-  }
-
-  return nbr;
-}
-
-function formatFlightLevel(value: number | null): FieldFormatTuple {
-  if (value === null || value === undefined) {
-    return ['---', 'FL', null] as FieldFormatTuple;
-  }
-  const fl = Math.round(value);
-  return [fl.toFixed(0).toString().padStart(3, '0'), 'FL', null] as FieldFormatTuple;
-}
-
 export interface DataEntryFormat<T, U = T> {
-  placeholder?: string;
+  placeholder: string;
   maxDigits: number;
   maxOverflowDigits?: number;
   unit?: string;
@@ -339,9 +298,15 @@ export class AltitudeFormat extends SubscriptionCollector implements DataEntryFo
  * Unit of value: Feet (i.e. FL * 100)
  */
 export class FlightLevelFormat extends SubscriptionCollector implements DataEntryFormat<number> {
+  public readonly placeholder = '---';
+
   public readonly maxDigits = 3;
 
   public readonly maxOverflowDigits = 2;
+
+  public readonly unit = 'FL';
+
+  private readonly requiredFormat = `FL XXX`;
 
   private minValue = 0;
 
@@ -357,75 +322,11 @@ export class FlightLevelFormat extends SubscriptionCollector implements DataEntr
   }
 
   public format(value: number) {
-    return formatFlightLevel(value);
-  }
-
-  public async parse(input: string) {
-    return parseFlightLevel(input, this.minValue, this.maxValue);
-  }
-
-  destroy(): void {
-    super.destroy();
-  }
-}
-
-export class WindAltitudeFormat extends SubscriptionCollector implements DataEntryFormat<number> {
-  public readonly placeholder = '-----';
-
-  public readonly maxDigits = 5;
-
-  private readonly minValue = 0;
-
-  private readonly requiredFormat = 'FOR ALT XXXXX FOR FL XXX';
-
-  private readonly maxValue = maxCertifiedAlt;
-
-  private transAlt: number | null = null;
-
-  reFormatTrigger = Subject.create(false);
-
-  private readonly isTransAltFlightLevel: Subscribable<boolean>;
-
-  constructor(
-    transAlt: Subscribable<number | null> | null = null,
-    isTransAltFlightLevel: Subscribable<boolean> | boolean = Subject.create(false),
-    private readonly groundAltitude: Subscribable<number | null>,
-  ) {
-    super();
-    this.isTransAltFlightLevel = SubscribableUtils.toSubscribable(isTransAltFlightLevel, true);
-    if (transAlt !== null) {
-      this.subscriptions.push(
-        MappedSubject.create(
-          ([val, isFl]) => (val !== null ? (isFl ? val * 100 : val) : null),
-          transAlt,
-          this.isTransAltFlightLevel,
-        ).sub((val) => {
-          this.transAlt = val;
-          this.reFormatTrigger.notify();
-        }),
-      );
-    }
-  }
-
-  public format(value: number) {
     if (value === null || value === undefined) {
-      return [this.placeholder, null, '\xa0\xa0'] as FieldFormatTuple;
+      return [this.placeholder, this.unit, null] as FieldFormatTuple;
     }
-
-    if (value <= this.groundAltitude.get()!) {
-      // We should never enter here if ground altitude is null
-      return ['GND', null, null] as FieldFormatTuple;
-    }
-
-    if (this.transAlt !== null) {
-      if (
-        (!this.isTransAltFlightLevel.get() && value > this.transAlt) ||
-        (this.isTransAltFlightLevel.get() && value >= this.transAlt)
-      ) {
-        return [(value / 100).toFixed(0).toString().padStart(3, '0'), 'FL', null] as FieldFormatTuple; // Add some whitespaces so it fits to input.
-      }
-    }
-    return [value.toFixed(0).toString(), null, 'FT'] as FieldFormatTuple;
+    const fl = Math.round(value);
+    return [fl.toFixed(0).toString().padStart(3, '0'), this.unit, null] as FieldFormatTuple;
   }
 
   public async parse(input: string) {
@@ -433,58 +334,22 @@ export class WindAltitudeFormat extends SubscriptionCollector implements DataEnt
       return null;
     }
 
-    let nbr = Number(input);
-    if (input.length <= 3) {
-      nbr = Number(input) * 100;
-    }
-    const groundAlt = this.groundAltitude.get();
-    if (input.toUpperCase() === 'GND') {
-      if (groundAlt !== null) {
-        nbr = groundAlt;
-      } else {
-        // Throw entry out of range if we don't know the ground altitude.
-        throw new A380FmsError(FmsErrorType.EntryOutOfRange);
+    // Accept "FL" followed by 1 to 3 digits, e.g. "FL30" or "FL300"
+    let nbr: number = Number(input);
+    if (Number.isNaN(nbr)) {
+      const flMatch = input.match(/^FL(\d{1,3})$/i);
+      if (flMatch) {
+        nbr = Number(flMatch[1]);
       }
     }
 
-    if (Number.isNaN(nbr)) {
-      throw getFormattedFormatError(this.requiredFormat);
-    } else if (nbr > this.maxValue || nbr < this.minValue || (groundAlt === null && nbr <= 400)) {
+    if (nbr > this.maxValue || nbr < this.minValue) {
       throw new A380FmsError(FmsErrorType.EntryOutOfRange);
+    } else if (Number.isNaN(nbr)) {
+      throw getFormattedFormatError(this.requiredFormat);
     }
 
-    return Math.max(nbr, groundAlt ?? 0);
-  }
-
-  destroy(): void {
-    super.destroy();
-  }
-}
-
-export class WindFlightLevelFormat extends SubscriptionCollector implements DataEntryFormat<number> {
-  public readonly placeholder = '---';
-
-  public readonly maxDigits = 5;
-
-  private minValue = 0;
-
-  private maxValue = maxCertifiedAlt;
-
-  constructor(
-    minValue: Subscribable<number> = Subject.create(0),
-    maxValue: Subscribable<number> = Subject.create(maxCertifiedAlt / 100),
-  ) {
-    super();
-    this.subscriptions.push(minValue.sub((val) => (this.minValue = val), true));
-    this.subscriptions.push(maxValue.sub((val) => (this.maxValue = val), true));
-  }
-
-  public format(value: number) {
-    return formatFlightLevel(value);
-  }
-
-  public async parse(input: string) {
-    return parseFlightLevel(input, this.minValue, this.maxValue);
+    return nbr;
   }
 
   destroy(): void {
@@ -984,26 +849,48 @@ export class TripWindFormat implements DataEntryFormat<number> {
   }
 }
 
-export class QnhFormat implements DataEntryFormat<number> {
-  public placeholder = '----';
+export class QnhFormat extends SubscriptionCollector implements DataEntryFormat<number> {
+  /** 1-4 digits */
+  static readonly QNH_REGEX_HPA = /^\d{1,4}$/;
 
-  public maxDigits = 5;
+  /** 4 digits or with a decimal point (NN.NN) */
+  static readonly QNH_REGEX_INCHES = /^\d{2}\.{0,1}\d{2}$/;
+
+  static readonly HPA_PLACE_HOLDER = '----';
+
+  static readonly INHG_PLACE_HOLDER = '--.--';
+
+  public placeholder = QnhFormat.HPA_PLACE_HOLDER;
+
+  public readonly maxDigits = 5;
 
   private readonly requiredFormat = 'XXXX';
 
-  public static readonly minHpaValue = 745;
+  private readonly minHpaValue = 745;
 
-  public static readonly maxHpaValue = 1100;
+  private readonly maxHpaValue = 1100;
 
-  private minInHgValue = 22.0;
+  private readonly minInHgValue = 22.0;
 
-  private maxInHgValue = 32.48;
+  private readonly maxInHgValue = 32.48;
+
+  readonly reFormatTrigger = Subject.create(false);
+
+  constructor(private readonly isHpa: Subscribable<boolean> = Subject.create(true)) {
+    super();
+    this.subscriptions.push(
+      this.isHpa.sub((isHpa) => {
+        this.placeholder = isHpa ? QnhFormat.HPA_PLACE_HOLDER : QnhFormat.INHG_PLACE_HOLDER;
+        this.reFormatTrigger?.notify();
+      }, true),
+    );
+  }
 
   public format(value: number) {
     if (value === null || value === undefined) {
       return [this.placeholder, null, null] as FieldFormatTuple;
     }
-    return [value < QnhFormat.minHpaValue ? value.toFixed(2) : value.toFixed(0), null, null] as FieldFormatTuple;
+    return [value < this.minHpaValue ? value.toFixed(2) : value.toFixed(0), null, null] as FieldFormatTuple;
   }
 
   public async parse(input: string) {
@@ -1011,24 +898,33 @@ export class QnhFormat implements DataEntryFormat<number> {
       return null;
     }
 
-    const nbr = Number.parseFloat(input);
+    const parsedInput = Number.parseFloat(input);
 
-    if (Number.isNaN(nbr)) {
+    if (Number.isNaN(parsedInput)) {
       throw getFormattedFormatError(this.requiredFormat);
     }
 
-    const hpa = input.indexOf('.') === -1 && input.length >= 3;
-    const minValue = hpa ? QnhFormat.minHpaValue : this.minInHgValue;
-    const maxValue = hpa ? QnhFormat.maxHpaValue : this.maxInHgValue;
-
-    if (nbr >= minValue && nbr <= maxValue) {
-      return nbr;
-    } else {
-      throw getFormattedEntryOutOfRangeError(
-        hpa ? minValue.toString() : minValue.toFixed(2),
-        hpa ? maxValue.toString() : maxValue.toFixed(2),
-      );
+    // Test inches first (NNNN or NN.NN)
+    if (QnhFormat.QNH_REGEX_INCHES.test(input)) {
+      const containsDecimal = input.indexOf('.') !== -1;
+      const inchesInDecimal = containsDecimal ? parsedInput : parsedInput / 100;
+      const isValidInches = inchesInDecimal <= this.maxInHgValue && inchesInDecimal >= this.minInHgValue;
+      if (isValidInches) {
+        return inchesInDecimal;
+      } else if (containsDecimal) {
+        // If it contains a decimal we consider inches entry and quit early, otherwise we need to continue as NNNN is valid hpa.
+        throw getFormattedEntryOutOfRangeError(this.minInHgValue.toFixed(2), this.maxInHgValue.toFixed(2));
+      }
     }
+
+    // N, NN, NNN or NNNN
+    if (QnhFormat.QNH_REGEX_HPA.test(input)) {
+      if (parsedInput > this.maxHpaValue || parsedInput < this.minHpaValue) {
+        throw getFormattedEntryOutOfRangeError(this.minHpaValue.toString(), this.maxHpaValue.toString());
+      }
+      return parsedInput;
+    }
+    throw getFormattedFormatError(this.requiredFormat);
   }
 }
 

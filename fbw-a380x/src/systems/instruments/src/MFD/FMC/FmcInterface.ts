@@ -23,11 +23,11 @@ export enum FmcOperatingModes {
 }
 
 export interface FlightPhaseManagerProxyInterface {
-  handleFcuAltKnobPushPull(distanceToDestination: number): void;
+  handleFcuAltKnobPushPull(): void;
 
-  handleFcuAltKnobTurn(distanceToDestination: number): void;
+  handleFcuAltKnobTurn(): void;
 
-  handleFcuVSKnob(distanceToDestination: number, onStepClimbDescent: () => void): void;
+  handleFcuVSKnob(onStepClimbDescent: () => void): void;
 
   handleNewCruiseAltitudeEntered(newCruiseFlightLevel: number): void;
 
@@ -156,6 +156,8 @@ export interface FmcInterface extends FlightPhaseManagerProxyInterface, FmsDataI
 
   /** in kilograms */
   getTakeoffWeight(forPlan: FlightPlanIndex): number | null;
+
+  calculateTakeoffWeight(forPlan: FlightPlanIndex): void;
 
   /** in kilograms */
   getTripFuel(forPlan: FlightPlanIndex): number | null;
@@ -345,18 +347,16 @@ export interface FmcInterface extends FlightPhaseManagerProxyInterface, FmsDataI
 
   clearCheckSpeedModeMessage(): void;
 
-  /**
-   * Gets the history winds stored in the FMC.
-   * @param cruiseFlightLevel The cruise flight level to interpolate the winds against, if any.
-   * @returns An array of wind entries.
-   */
-  getHistoryWinds(cruiseFlightLevel: number | null): Readonly<HistoryWindEntry>[];
+  engineOutActive(): boolean;
 
-  /**
-   * Inserts the history winds into the flight plan cruise winds.
-   * @returns true if the insertion was succesful. False if it failed due to TMPY or wrong flight phase.
-   */
-  insertHistoryWinds(): boolean;
+  /** Returns whether inches is selected on the FCU of the associated side */
+  inchesSelectedOnFcu(side: EfisSide): boolean;
+
+  getApproachCrossWindComponent(forPlan?: FlightPlanIndex): number | null;
+
+  getApproachHeadWindComponent(forPlan?: FlightPlanIndex): number | null;
+
+  trySetCruiseFl(fl: number, intoPlan: FlightPlanIndex): void;
 
   reset(): void;
 

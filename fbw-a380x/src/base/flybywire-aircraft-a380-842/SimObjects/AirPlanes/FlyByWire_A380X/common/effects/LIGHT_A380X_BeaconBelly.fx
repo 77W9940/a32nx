@@ -69,6 +69,5 @@ Intensity=942.478
 Softness=0
 SpotInner=85.5
 SpotOuter=92.5
-Volumetric=0
+Volumetric=1
 ScatDir=0.0
-

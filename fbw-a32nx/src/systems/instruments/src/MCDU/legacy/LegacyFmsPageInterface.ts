@@ -29,6 +29,8 @@ import { DataManager } from '@fmgc/flightplanning/DataManager';
 import { EfisInterface } from '@fmgc/efis/EfisInterface';
 import { FuelPredictions } from '@fmgc/flightplanning/fuel/FuelPredictions';
 import { WindEntry } from '@fmgc/flightplanning/data/wind';
+import { Accessible } from '@microsoft/msfs-sdk';
+import { FlightPlan } from '@fmgc/flightplanning/plans/FlightPlan';
 
 export type LskCallback = (
   /** The scratchpad content when the LSK was pressed. */
@@ -118,6 +120,7 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
     bypassTmpy?: boolean,
   ): void;
   isNavModeEngaged(): boolean;
+  isInhgSelected(): boolean;
   isFlying(): boolean;
   trySetZeroFuelWeightZFWCG(s: string, forPlan: FlightPlanIndex): boolean;
   /** @deprecated use getGrossWeight */
@@ -139,7 +142,7 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
   tryUpdateAltDestination(altDestIdent: string, forPlan: FlightPlanIndex): Promise<boolean>;
   tryUpdateTropo(tropo: string, forPlan: FlightPlanIndex): boolean;
   tryUpdateFromTo(fromTo: string, forPlan: FlightPlanIndex, callback?: typeof EmptyCallback.Boolean): void;
-  trySetGroundTemp(scratchpadValue: string, forPlan: FlightPlanIndex): void;
+  trySetGroundTemp(scratchpadValue: string, forPlan: number): Promise<boolean>;
   goToFuelPredPage(forPlan: FlightPlanIndex): void;
   trySetBlockFuel(s: string, forPlan: FlightPlanIndex): boolean;
   tryFuelPlanning(forPlan: FlightPlanIndex): boolean;
@@ -180,7 +183,7 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
   getDestinationTransitionLevel(): number | undefined;
   getNavModeSpeedConstraint(): number;
   trySetPreSelectedClimbSpeed(s: string, forPlan: FlightPlanIndex): boolean;
-  tryUpdateCostIndex(costIndex: string, forPlan: FlightPlanIndex): boolean;
+  tryUpdateCostIndex(costIndex: string, forPlan: FlightPlanIndex): Promise<boolean>;
   trySetPerfClbPredToAltitude(value: string, cruiseLevel: number | null): boolean;
   trySetPreSelectedCruiseSpeed(s: string, forPlan: FlightPlanIndex): boolean;
   trySetPerfDesPredToAltitude(value: string): boolean;
@@ -225,6 +228,10 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
   getHistoryWinds(cruiseLevel: number | null): Readonly<WindEntry>[] | undefined;
   getTimePrediction(secondsFromPresent: number, forPlan: FlightPlanIndex): string;
   getTimePredictionHeader(forPlan: FlightPlanIndex): string;
+  clearEngineOutCondition(): void;
+  isCostIndexModificationDisabled(plan: FlightPlan): boolean;
+  confirmTakeoffData(): void;
+  shouldShowConfirmTakeoffData(forPlan: FlightPlanIndex): boolean;
 
   flightPlanService: FlightPlanService;
   navigationDatabase: NavigationDatabase;
@@ -248,8 +255,6 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
   simbriefOfpState: SimbriefOfpState;
   /** another mess */
   simbrief: any;
-  /** @deprecated */
-  costIndex: number | undefined;
   casToMachManualCrossoverCurve: any;
   machToCasManualCrossoverCurve: any;
   tropo: number | undefined;
@@ -282,6 +287,7 @@ interface LegacyFmsPageFmsInterface extends FmsDataInterface, FmsDisplayInterfac
   progDistance: number;
   progWaypointIdent: string | undefined;
   isTrueRefMode: boolean;
+  readonly isEngineOutCondition: Accessible<boolean>;
 }
 
 /** This breaks some circular refs, and tells us what we need a shim for to wrap legacy pages in future. */

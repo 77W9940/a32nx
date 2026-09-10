@@ -5,7 +5,7 @@
 
 <ModelInfo>
 	<Behaviors>
-        <Include Path="A380X\id_definitions.xml" />
+        <Include Path="fbw_a380x\id_definitions.xml" />
 
         <!-- Legacy includes -->
         <Include RelativeFile="behaviour\legacy\Interior\A32NX_Interior_Includes.xml" />
@@ -31,7 +31,6 @@
         <Include RelativeFile="behaviour\overhead\reset.xml" />
         <Include RelativeFile="behaviour\pedestal\pedestal-inputs.xml" />
         <Include RelativeFile="behaviour\pedestal\pedestal.xml" />
-        <Include RelativeFile="behaviour\door_animations.xml" />
         <Include RelativeFile="behaviour\efis-cp.xml" />
         <Include RelativeFile="behaviour\ecam-cp.xml" />
         <Include RelativeFile="behaviour\fcu.xml" />
@@ -90,9 +89,6 @@
         <Component ID="INTERACTIVE_PARTS">
             <UseTemplate Name="FBW_A380X_Components_InteractiveParts" />
         </Component>
-        <!-- <Component ID="DOOR_ANIMATIONS_COCKPIT">
-            <UseTemplate Name="FBW_A380X_Components_DoorAnimations" />
-        </Component> -->
         <Component ID="MIP">
             <UseTemplate Name="FBW_A380X_Components_MIP" />
         </Component>
@@ -111,63 +107,6 @@
         <Component ID="VARIABLE_MAPPING">
             <Update Frequency="18">
                 (L:A32NX_OVHD_INTLT_ANN, number) (&gt;L:A380X_OVHD_INTLT_ANN, number)
-                (L:A32NX_EFIS_L_ND_RANGE) (&gt;L:A380X_EFIS_L_ND_RANGE)
-                (L:A32NX_EFIS_R_ND_RANGE) (&gt;L:A380X_EFIS_R_ND_RANGE)
-
-                (L:A32NX_EFIS_L_ND_MODE) (&gt;L:A380X_EFIS_L_ND_MODE)
-                (L:A32NX_EFIS_R_ND_MODE) (&gt;L:A380X_EFIS_R_ND_MODE)
-
-                0
-
-                (L:A380X_EFIS_L_ACTIVE_FILTER) 1 == if{
-                    4 |
-                }
-
-                (L:A380X_EFIS_L_ACTIVE_FILTER) 2 == if{
-                    2 |
-                }
-
-                (L:A380X_EFIS_L_ACTIVE_FILTER) 3 == if{
-                    8 |
-                }
-
-                (L:A380X_EFIS_L_ARPT_BUTTON_IS_ON) 1 == if{
-                    16 |
-                }
-
-                (L:A380X_EFIS_L_CSTR_BUTTON_IS_ON) 1 == if{
-                    1 |
-                }
-
-                (&gt;L:A32NX_EFIS_L_OPTION)
-
-                (L:A380X_EFIS_L_ACTIVE_OVERLAY) 2 == (&gt;L:A32NX_EFIS_TERR_L_ACTIVE)
-
-                0
-
-                (L:A380X_EFIS_R_ACTIVE_FILTER) 1 == if{
-                    4 |
-                }
-
-                (L:A380X_EFIS_R_ACTIVE_FILTER) 2 == if{
-                    2 |
-                }
-
-                (L:A380X_EFIS_R_ACTIVE_FILTER) 3 == if{
-                    8 |
-                }
-
-                (L:A380X_EFIS_R_ARPT_BUTTON_IS_ON) 1 == if{
-                    16 |
-                }
-
-                (L:A380X_EFIS_R_CSTR_BUTTON_IS_ON) 1 == if{
-                    1 |
-                }
-
-                (&gt;L:A32NX_EFIS_R_OPTION)
-
-                (L:A380X_EFIS_R_ACTIVE_OVERLAY) 2 == (&gt;L:A32NX_EFIS_TERR_R_ACTIVE)
 
                 (A:LIGHT POTENTIOMETER:7, Percent over 100) 0 &gt; if{
                     1 1 (&gt;K:2:CABIN_LIGHTS_SET)
@@ -178,6 +117,16 @@
                 (A:LIGHT POTENTIOMETER:7, Percent over 100) (&gt;O:PrevPot7Value)
                 (L:CPT_SLIDING_WINDOW) (L:FO_SLIDING_WINDOW) + 2 /
                 (&gt;L:A380X_SOUND_COCKPIT_WINDOW_RATIO)
+
+                (L:A380X_OVHD_STORM_LT, bool) if{
+                    100 (&gt;L:A380X_PED_LIGHTING_MIP_FLOOD_LT_LEVEL, percent)
+                    100 (&gt;L:A380X_PED_LIGHTING_AMBIENT_LT_LEVEL, percent)
+                } els{
+                    (L:A380X_PED_LIGHTING_MIP_FLOOD_LT_KNOB, percent) (&gt;L:A380X_PED_LIGHTING_MIP_FLOOD_LT_LEVEL, percent)
+                    (L:A380X_PED_LIGHTING_AMBIENT_LT_KNOB, percent) (&gt;L:A380X_PED_LIGHTING_AMBIENT_LT_LEVEL, percent)
+                }
+                (L:A380X_PED_LIGHTING_MIP_FLOOD_LT_LEVEL, percent) 83 (&gt;K:2:LIGHT_POTENTIOMETER_SET)
+                (L:A380X_PED_LIGHTING_AMBIENT_LT_LEVEL, percent) 7 (&gt;K:2:LIGHT_POTENTIOMETER_SET)
             </Update>
         </Component>
 
@@ -354,7 +303,6 @@
                 </Component>
             </Component>
 
-            <!-- FIXME backlight missing -->
             <!-- OIT_L -->
             <Component ID="OITL">
                 <Component ID="SCREEN_OITL">
@@ -363,10 +311,14 @@
                         <POTENTIOMETER>@POT_EFIS_CS_OIT</POTENTIOMETER>
                         <EMISSIVE_CODE>(L:A32NX_ELEC_AC_2_BUS_IS_POWERED, Bool)</EMISSIVE_CODE>
                     </UseTemplate>
+                    <UseTemplate Name="ASOBO_GT_Component_Emissive_Gauge">
+                        <NODE_ID>SCREEN_BACKLIGHT_DU_OITL</NODE_ID>
+                        <POTENTIOMETER>@POT_EFIS_CS_OIT</POTENTIOMETER>
+                        <EMISSIVE_CODE>(L:A32NX_ELEC_AC_2_BUS_IS_POWERED, Bool) 5 *</EMISSIVE_CODE>
+                    </UseTemplate>
                 </Component>
             </Component>
 
-            <!-- FIXME backlight missing -->
             <!-- OIT_R -->
             <Component ID="OITR">
                 <Component ID="SCREEN_OITR">
@@ -374,6 +326,11 @@
                         <NODE_ID>SCREEN_OIT_RIGHT</NODE_ID>
                         <POTENTIOMETER>@POT_EFIS_FO_OIT</POTENTIOMETER>
                         <EMISSIVE_CODE>(L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED, Bool)</EMISSIVE_CODE>
+                    </UseTemplate>
+                    <UseTemplate Name="ASOBO_GT_Component_Emissive_Gauge">
+                        <NODE_ID>SCREEN_BACKLIGHT_DU_OITR</NODE_ID>
+                        <POTENTIOMETER>@POT_EFIS_FO_OIT</POTENTIOMETER>
+                        <EMISSIVE_CODE>(L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED, Bool) 5 *</EMISSIVE_CODE>
                     </UseTemplate>
                 </Component>
             </Component>
@@ -686,7 +643,7 @@
                 <PART_ID>LIGHTING_Knob_Glareshield_1</PART_ID>
                 <ANIMTIP_0>TT:COCKPIT.TOOLTIPS.LIGHTING_KNOB_LIGHT_GENERIC_DECREASE</ANIMTIP_0>
                 <ANIMTIP_1>TT:COCKPIT.TOOLTIPS.LIGHTING_KNOB_LIGHT_GENERIC_INCREASE</ANIMTIP_1>
-                <POTENTIOMETER>83</POTENTIOMETER>
+                <ANIM_SIMVAR>L:A380X_PED_LIGHTING_MIP_FLOOD_LT_KNOB</ANIM_SIMVAR>
             </UseTemplate>
 
             <!-- MAIN PNL Triangle Emissives (4) -->
@@ -855,16 +812,16 @@
             <!-- Console/Floor Lights -->
             <UseTemplate Name="FBW_LIGHTING_Switch_Console_Template">
                 <POTENTIOMETER>8</POTENTIOMETER>
-                <NODE_ID>SWITCH_EFIS_CS_CONSOLE</NODE_ID>
-                <PART_ID>SWITCH_EFIS_CS_CONSOLE</PART_ID>
-                <ANIM_NAME>SWITCH_EFIS_CS_CONSOLE</ANIM_NAME>
+                <NODE_ID>SWITCH_GLARESHIELD_CS_CONSOLE_FLOOR_LT</NODE_ID>
+                <PART_ID>SWITCH_GLARESHIELD_CS_CONSOLE_FLOOR_LT</PART_ID>
+                <ANIM_NAME>SWITCH_GLARESHIELD_CS_CONSOLE_FLOOR_LT</ANIM_NAME>
             </UseTemplate>
 
             <UseTemplate Name="FBW_LIGHTING_Switch_Console_Template">
                 <POTENTIOMETER>9</POTENTIOMETER>
-                <NODE_ID>SWITCH_EFIS_FO_CONSOLE</NODE_ID>
-                <PART_ID>SWITCH_EFIS_FO_CONSOLE</PART_ID>
-                <ANIM_NAME>SWITCH_EFIS_FO_CONSOLE</ANIM_NAME>
+                <NODE_ID>SWITCH_GLARESHIELD_FO_CONSOLE_FLOOR_LT</NODE_ID>
+                <PART_ID>SWITCH_GLARESHIELD_FO_CONSOLE_FLOOR_LT</PART_ID>
+                <ANIM_NAME>SWITCH_GLARESHIELD_FO_CONSOLE_FLOOR_LT</ANIM_NAME>
             </UseTemplate>
         </Component>
 
@@ -2348,7 +2305,7 @@
                         <NODE_ID>LIGHTING_Knob_Ambient</NODE_ID>
                         <ANIMTIP_0>TT:COCKPIT.TOOLTIPS.LIGHTING_KNOB_PEDESTAL_DECREASE</ANIMTIP_0>
                         <ANIMTIP_1>TT:COCKPIT.TOOLTIPS.LIGHTING_KNOB_PEDESTAL_INCREASE</ANIMTIP_1>
-                        <POTENTIOMETER>7</POTENTIOMETER>
+                        <ANIM_SIMVAR>L:A380X_PED_LIGHTING_AMBIENT_LT_KNOB</ANIM_SIMVAR>
                     </UseTemplate>
                 </Component>
 

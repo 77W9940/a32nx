@@ -21,9 +21,7 @@ import {
 import { FlightPlanFlags } from './plans/FlightPlanFlags';
 import { FlightPlanBatch } from '@fmgc/flightplanning/plans/FlightPlanBatch';
 import { WindEntry, PropagatedWindEntry, WindVector, FlightPlanWindEntry } from './data/wind';
-import { BaseFlightPlan } from './plans/BaseFlightPlan';
-import { FlightPlanOperationEvents } from '../events/FlightPlanOperationEvents';
-import { FlightPlanEvents } from './sync/FlightPlanEvents';
+import { FlightPlan } from './plans/FlightPlan';
 
 export class FlightPlanService<P extends FlightPlanPerformanceData = FlightPlanPerformanceData>
   implements FlightPlanInterface<P>
@@ -361,6 +359,10 @@ export class FlightPlanService<P extends FlightPlanPerformanceData = FlightPlanP
       throw new Error('[FMS/FPM] Cannot enter new city pair on temporary flight plan');
     }
 
+    const flightNumber = this.flightPlanManager.has(planIndex)
+      ? this.flightPlanManager.get(planIndex).flightNumber.get()
+      : null;
+
     if (planIndex === FlightPlanIndex.Active && this.flightPlanManager.has(FlightPlanIndex.Temporary)) {
       this.flightPlanManager.delete(FlightPlanIndex.Temporary);
     }
@@ -371,6 +373,10 @@ export class FlightPlanService<P extends FlightPlanPerformanceData = FlightPlanP
     this.flightPlanManager.create(planIndex, true, FlightPlanFlags.ManualCreation);
 
     const plan = this.flightPlanManager.get(planIndex);
+
+    if (flightNumber !== null) {
+      plan.setFlightNumber(flightNumber);
+    }
 
     await plan.setOriginAirport(fromIcao);
     await plan.setDestinationAirport(toIcao);
@@ -1254,5 +1260,125 @@ export class FlightPlanService<P extends FlightPlanPerformanceData = FlightPlanP
     if (this.alternateDraftWindExists) {
       this.alternateDraftWindExists = false;
     }
+  }
+
+  private findEngineOutBranchIndex(plan: FlightPlan<any>): number {
+    const activeLegs = plan.allLegs;
+    for (let i = 0; i < activeLegs.length; i++) {
+      const leg = activeLegs[i];
+      if (leg.isDiscontinuity === false && leg.definition.isEngineOutBranch) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /** @inheritdoc */
+  public async tryActivateEngineOutSid(): Promise<boolean> {
+    if (!this.flightPlanManager.has(FlightPlanIndex.Active)) {
+      return false;
+    }
+
+    const activePlan = this.flightPlanManager.get(FlightPlanIndex.Active);
+    if (activePlan.departureRunwayTransition.engineOutDeparture === undefined) {
+      return false;
+    }
+
+    const branchIndex = this.findEngineOutBranchIndex(activePlan);
+    if (branchIndex < 0 || activePlan.activeLegIndex > branchIndex) {
+      return false;
+    }
+
+    if (this.flightPlanManager.has(FlightPlanIndex.Temporary)) {
+      this.flightPlanManager.delete(FlightPlanIndex.Temporary);
+    }
+
+    const tmpyIndex = this.prepareDestructiveModification(FlightPlanIndex.Active);
+    const plan = this.flightPlanManager.get(tmpyIndex);
+
+    plan.departureEnrouteTransitionSegment.clear();
+    plan.departureSegment.setProcedure(activePlan.departureRunwayTransition.engineOutDeparture.databaseId);
+    plan.enrouteSegment.clear();
+    plan.arrivalSegment.clear();
+    plan.approachSegment.clear();
+    plan.missedApproachSegment.clear();
+
+    await plan.setDestinationAirport(plan.originAirport.ident);
+
+    plan.flags |= FlightPlanFlags.EngineOutSid;
+
+    return true;
+  }
+
+  public tryEraseEngineOutSid(): Promise<boolean> {
+    if (this.flightPlanManager.has(FlightPlanIndex.Temporary)) {
+      const plan = this.flightPlanManager.get(FlightPlanIndex.Temporary);
+      if (plan.flags & FlightPlanFlags.EngineOutSid) {
+        this.flightPlanManager.delete(FlightPlanIndex.Temporary);
+        return Promise.resolve(true);
+      }
+    }
+
+    return Promise.resolve(false);
+  }
+
+  private findEngineOutBranchIndex(plan: FlightPlan<any>): number {
+    const activeLegs = plan.allLegs;
+    for (let i = 0; i < activeLegs.length; i++) {
+      const leg = activeLegs[i];
+      if (leg.isDiscontinuity === false && leg.definition.isEngineOutBranch) {
+        return i;
+      }
+    }
+    return -1;
+  }
+
+  /** @inheritdoc */
+  public async tryActivateEngineOutSid(): Promise<boolean> {
+    if (!this.flightPlanManager.has(FlightPlanIndex.Active)) {
+      return false;
+    }
+
+    const activePlan = this.flightPlanManager.get(FlightPlanIndex.Active);
+    if (activePlan.departureRunwayTransition.engineOutDeparture === undefined) {
+      return false;
+    }
+
+    const branchIndex = this.findEngineOutBranchIndex(activePlan);
+    if (branchIndex < 0 || activePlan.activeLegIndex > branchIndex) {
+      return false;
+    }
+
+    if (this.flightPlanManager.has(FlightPlanIndex.Temporary)) {
+      this.flightPlanManager.delete(FlightPlanIndex.Temporary);
+    }
+
+    const tmpyIndex = this.prepareDestructiveModification(FlightPlanIndex.Active);
+    const plan = this.flightPlanManager.get(tmpyIndex);
+
+    plan.departureEnrouteTransitionSegment.clear();
+    plan.departureSegment.setProcedure(activePlan.departureRunwayTransition.engineOutDeparture.databaseId);
+    plan.enrouteSegment.clear();
+    plan.arrivalSegment.clear();
+    plan.approachSegment.clear();
+    plan.missedApproachSegment.clear();
+
+    await plan.setDestinationAirport(plan.originAirport.ident);
+
+    plan.flags |= FlightPlanFlags.EngineOutSid;
+
+    return true;
+  }
+
+  public tryEraseEngineOutSid(): Promise<boolean> {
+    if (this.flightPlanManager.has(FlightPlanIndex.Temporary)) {
+      const plan = this.flightPlanManager.get(FlightPlanIndex.Temporary);
+      if (plan.flags & FlightPlanFlags.EngineOutSid) {
+        this.flightPlanManager.delete(FlightPlanIndex.Temporary);
+        return Promise.resolve(true);
+      }
+    }
+
+    return Promise.resolve(false);
   }
 }

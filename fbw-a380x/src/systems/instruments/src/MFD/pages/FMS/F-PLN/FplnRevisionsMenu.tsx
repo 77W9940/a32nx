@@ -8,7 +8,7 @@ import { MfdFmsFpln } from './MfdFmsFpln';
 import { ContextMenuElement } from '../../../../MsfsAvionicsCommon/UiWidgets/ContextMenu';
 import { BitFlags } from '@microsoft/msfs-sdk';
 import { FlightPlanLegFlags } from '@fmgc/flightplanning/legs/FlightPlanLeg';
-import { lateralRevisionHoldPage, showReturnButtonUriExtra } from '../../../shared/utils';
+import { isConstraintRevisionAllowed, lateralRevisionHoldPage } from '../../../shared/utils';
 
 export enum FplnRevisionsMenuType {
   Waypoint,
@@ -181,7 +181,11 @@ export function getRevisionsMenu(fpln: MfdFmsFpln, type: FplnRevisionsMenuType):
     },
     {
       name: 'ENABLE ALTN *',
-      disabled: !revisedLeg || revisedLeg.isDiscontinuity,
+      disabled:
+        altnFlightPlan ||
+        !revisedLeg ||
+        revisedLeg.isDiscontinuity ||
+        fpln.props.fmcService.master.flightPlanInterface.get(planIndex).alternateDestinationAirport === undefined,
       onPressed: () => {
         const cruiseLevel = fpln.props.fmcService.master?.computeAlternateCruiseLevel(planIndex) ?? 100;
         fpln.props.fmcService.master?.flightPlanInterface.enableAltn(legIndex, cruiseLevel, planIndex);
@@ -197,10 +201,10 @@ export function getRevisionsMenu(fpln: MfdFmsFpln, type: FplnRevisionsMenuType):
     {
       name: 'CONSTRAINTS',
       disabled:
-        altnFlightPlan ||
-        !isLegTerminatingAtDatabaseFix ||
+        revisedLeg === undefined ||
         type === FplnRevisionsMenuType.Discontinuity ||
-        type === FplnRevisionsMenuType.TooSteepPath,
+        type === FplnRevisionsMenuType.TooSteepPath ||
+        !isConstraintRevisionAllowed(revisedLeg),
       onPressed: () =>
         fpln.props.mfd.uiService.navigateTo(
           `fms/${fpln.props.mfd.uiService.activeUri.get().category}/f-pln-vert-rev/alt`,
@@ -231,19 +235,21 @@ export function getRevisionsMenu(fpln: MfdFmsFpln, type: FplnRevisionsMenuType):
         ),
     },
     {
-      name: 'WIND',
-      disabled:
-        altnFlightPlan ||
-        !isLegTerminatingAtDatabaseFix ||
-        type === FplnRevisionsMenuType.Discontinuity ||
-        type === FplnRevisionsMenuType.TooSteepPath,
+      name: '(N/A) WIND',
+      disabled: true,
       onPressed: () => {
         if (!revisedLeg || revisedLeg.isDiscontinuity !== false) {
           return;
         }
-        fpln.props.mfd.uiService.navigateTo(
-          `fms/${fpln.props.mfd.uiService.activeUri.get().category}/wind/${showReturnButtonUriExtra}/${legIndex}`,
-        );
+
+        // Find out whether waypoint is CLB, CRZ or DES waypoint and direct to appropriate WIND sub-page
+        if (revisedLeg.segment.class === SegmentClass.Arrival) {
+          fpln.props.mfd.uiService.navigateTo(`fms/${fpln.props.mfd.uiService.activeUri.get().category}/wind/des`);
+        } else if (revisedLeg.segment.class === SegmentClass.Enroute) {
+          fpln.props.mfd.uiService.navigateTo(`fms/${fpln.props.mfd.uiService.activeUri.get().category}/wind/crz`);
+        } else {
+          fpln.props.mfd.uiService.navigateTo(`fms/${fpln.props.mfd.uiService.activeUri.get().category}/wind/clb`);
+        }
       },
     },
   ];
