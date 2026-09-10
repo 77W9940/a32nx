@@ -70,6 +70,16 @@ import { SimBriefUplinkAdapter } from '@fmgc/flightplanning/uplink/SimBriefUplin
 import { FlightPlanChangeNotifier } from '@fmgc/flightplanning/sync/FlightPlanChangeNotifier';
 import { FlightPlanUtils } from '@fmgc/flightplanning/FlightPlanUtils';
 import { A380SpeedsUtils } from '@shared/OperatingSpeeds';
+import { PendingWindUplinkParser } from '@fmgc/flightplanning/plans/PendingWindUplinkParser';
+import {
+  AtsuToFmsEvents,
+  FmsToAtsuEvents,
+  WindUplinkResponse,
+} from '../../MsfsAvionicsCommon/providers/FmsAtsuBusPublisher';
+import { AtsuStatusCodes } from '@datalink/common';
+import { formatWindRequest } from './WindUplinkUtils';
+import { HistoryWind } from '@fmgc/wind/HistoryWind';
+import { HistoryWindEntry } from '@fmgc/flightplanning/data/wind';
 
 export interface FmsErrorMessage {
   message: McduMessage;
@@ -195,7 +205,31 @@ export class FlightManagementComputer implements FmcInterface {
   // TODO remove this cyclic dependency, isWaypointInUse should be moved to DataInterface
   private dataManager: DataManager | null = null;
 
-  private readonly sub = this.bus.getSubscriber<FlightPhaseManagerEvents & MfdUIData>();
+  private readonly sub = this.bus.getSubscriber<FlightPhaseManagerEvents & MfdUIData & AtsuToFmsEvents>();
+
+  private readonly atsuBusPublisher = this.bus.getPublisher<FmsToAtsuEvents>();
+
+  private readonly cpnyWindUplinkInProgress = Subject.create(false);
+
+  private readonly windUplinkAvailableActive = Subject.create(false);
+
+  private readonly windUplinkAvailableSec: Subject<boolean>[] = [
+    Subject.create(false),
+    Subject.create(false),
+    Subject.create(false),
+  ];
+
+  private readonly draftWindsExist = Subject.create(false);
+
+  private readonly historyWind = new HistoryWind(this.bus, FpmConfigs.A380.LOAD_EMPTY_HISTORY_WIND);
+
+  private readonly windUplinkAvailableAnyPlan = MappedSubject.create(
+    (values) => values.some((v) => v),
+    this.windUplinkAvailableActive,
+    this.windUplinkAvailableSec[0],
+    this.windUplinkAvailableSec[1],
+    this.windUplinkAvailableSec[2],
+  );
 
   private readonly flightPhase = ConsumerSubject.create<FmgcFlightPhase>(
     this.sub.on('fmgc_flight_phase'),
@@ -394,6 +428,7 @@ export class FlightManagementComputer implements FmcInterface {
           this.removeMessageFromQueue(NXSystemMessages.comFplnReceivedPendingInsertion.text);
         }
       }),
+      this.sub.on('wind_uplink_response').handle((response) => this.onWindUplinkResponse(response)),
       this.destDataEntered,
       this.destDataEntered.sub((v) => {
         if (v) {
@@ -874,6 +909,15 @@ export class FlightManagementComputer implements FmcInterface {
   }
 
   /**
+   * Deletes the CPNY FPLN Uplink.
+   */
+  deleteCpnyFpln(): void {
+    this.flightPlanInterface.uplinkDelete();
+    this.fmgc.data.cpnyFplnAvailable.set(false);
+    this.fmgc.data.cpnyFplnRequestedForPlan.set(null);
+  }
+
+  /**
    * Called when a flight plan uplink is in progress
    */
   onUplinkInProgress() {
@@ -886,6 +930,144 @@ export class FlightManagementComputer implements FmcInterface {
   onUplinkDone(fltPlnReceived: boolean) {
     this.fmgc.data.cpnyFplnUplinkInProgress.set(false);
     this.fmgc.data.cpnyFplnAvailable.set(fltPlnReceived);
+  }
+
+  getCpnyFplnAvailable(): Subscribable<boolean> {
+    return this.fmgc.data.cpnyFplnAvailable;
+  }
+
+  getUplinkInProgress(): Subscribable<boolean> {
+    return this.fmgc.data.cpnyFplnUplinkInProgress;
+  }
+
+  getCpnyFplnUplinkInProgress(): Subscribable<boolean> {
+    return this.fmgc.data.cpnyFplnUplinkInProgress;
+  }
+
+  getCpnyFplnRequestedForPlan(): Subscribable<FlightPlanIndex | null> {
+    return this.fmgc.data.cpnyFplnRequestedForPlan;
+  }
+
+  /**
+   * Get the Subject tracking wind uplink availability for a given flight plan index.
+   * @param planIndex the flight plan index. Active flight plans use {@link this.windUplinkAvailableActive},
+   * secondaries index into {@link this.windUplinkAvailableSec} starting at {@link FlightPlanIndex.FirstSecondary}.
+   */
+  private windUplinkAvailableSubjectForPlan(planIndex: number): Subject<boolean> {
+    return planIndex === FlightPlanIndex.Active
+      ? this.windUplinkAvailableActive
+      : this.windUplinkAvailableSec[planIndex - FlightPlanIndex.FirstSecondary];
+  }
+
+  requestCpnyWind(forPlan: FlightPlanIndex): void {
+    if (this.cpnyWindUplinkInProgress.get()) {
+      return;
+    }
+
+    const hasfp = this.flightPlanInterface.has(forPlan);
+    if (!hasfp) {
+      return;
+    }
+
+    const fp = this.flightPlanInterface.get(forPlan === FlightPlanIndex.Temporary ? FlightPlanIndex.Active : forPlan);
+
+    fp.pendingWindUplink.onUplinkRequested();
+    const windReq = formatWindRequest(
+      forPlan,
+      fp,
+      this.fmgc.data.flightPhase.get(),
+      this.guidanceController,
+      this.dataManager,
+      this.flightPlanInterface,
+    );
+
+    this.atsuBusPublisher.pub(
+      'wind_uplink_request',
+      {
+        flightPlan: forPlan,
+        message: windReq,
+      },
+      true,
+    );
+
+    this.cpnyWindUplinkInProgress.set(true);
+  }
+
+  private onWindUplinkResponse(response: WindUplinkResponse) {
+    this.cpnyWindUplinkInProgress.set(false);
+
+    const hasfp = this.flightPlanInterface.has(response.flightPlan);
+    if (!hasfp || response.status !== AtsuStatusCodes.Ok || !response.message) {
+      return;
+    }
+
+    const fp = this.flightPlanInterface.get(response.flightPlan);
+    PendingWindUplinkParser.setFromUplink(response.message, fp, this.fmgc.data.flightPhase.get(), FpmConfigs.A380);
+
+    this.windUplinkAvailableSubjectForPlan(response.flightPlan).set(true);
+  }
+
+  async insertCpnyWind(flightPlanIndex: number): Promise<void> {
+    const hasfp = this.flightPlanInterface.has(flightPlanIndex);
+    if (!hasfp || this.flightPlanInterface.hasTemporary) {
+      return;
+    }
+
+    await this.flightPlanInterface.insertWindUplink(flightPlanIndex);
+    this.windUplinkAvailableSubjectForPlan(flightPlanIndex).set(false);
+  }
+
+  deleteCpnyWind(flightPlanIndex: number): void {
+    const hasfp = this.flightPlanInterface.has(flightPlanIndex);
+    if (!hasfp || this.flightPlanInterface.hasTemporary) {
+      return;
+    }
+    const fp = this.flightPlanInterface.get(flightPlanIndex);
+    fp.pendingWindUplink.delete();
+    this.windUplinkAvailableSubjectForPlan(flightPlanIndex).set(false);
+  }
+
+  getCpnyWindUplinkInProgress(): Subscribable<boolean> {
+    return this.cpnyWindUplinkInProgress;
+  }
+
+  getWindUplinkAvailableForPlan(planIndex?: FlightPlanIndex): Subscribable<boolean> {
+    if (planIndex === undefined) {
+      return this.windUplinkAvailableAnyPlan;
+    }
+    return this.windUplinkAvailableSubjectForPlan(planIndex);
+  }
+
+  getDraftWindsExist(): Subscribable<boolean> {
+    return this.draftWindsExist;
+  }
+
+  getHistoryWinds(cruiseLevel: number | null): readonly HistoryWindEntry[] {
+    return this.historyWind.getRecordedWinds(cruiseLevel);
+  }
+
+  insertHistoryWinds(): boolean {
+    if (!this.flightPlanInterface.hasActive) {
+      return false;
+    }
+
+    const plan = this.flightPlanInterface.active;
+    const cruiseLevel = plan.performanceData.cruiseFlightLevel.get();
+    const historyWinds = this.historyWind.getRecordedWinds(cruiseLevel).filter((entry) => !entry.isEmpty);
+
+    if (historyWinds.length === 0) {
+      return false;
+    }
+
+    for (const entry of historyWinds) {
+      this.flightPlanInterface.setClimbWindEntry(
+        entry.altitude,
+        { altitude: entry.altitude, vector: entry.vector },
+        FlightPlanIndex.Active,
+      );
+    }
+
+    return true;
   }
 
   canActivateOrSwapSecondary(secIndex: number): boolean {
@@ -1479,6 +1661,8 @@ export class FlightManagementComputer implements FmcInterface {
                 SimVar.GetSimVarValue('L:A32NX_ENGINE_N2:3', 'number') > 20 ||
                 SimVar.GetSimVarValue('L:A32NX_ENGINE_N2:4', 'number') > 20)),
         );
+
+        this.draftWindsExist.set(this.#flightPlanService.hasDraftWinds());
 
         this.acInterface.sfccAquisition();
         this.acInterface.updateThrustReductionAcceleration();

@@ -2,6 +2,7 @@ import { EventBus, SimVarDefinition, SimVarValueType } from '@microsoft/msfs-sdk
 import { UpdatableSimVarPublisher } from '../../MsfsAvionicsCommon/UpdatableSimVarPublisher';
 
 export interface PFDSimvars {
+  climbDerate: number;
   coldDark: number;
   elec: number;
   elecFo: number;
@@ -108,6 +109,7 @@ export interface PFDSimvars {
 }
 
 export enum PFDVars {
+  climbDerate = 'L:A32NX_CLIMB_DERATE',
   coldDark = 'L:A32NX_COLD_AND_DARK_SPAWN',
   elec = 'L:A32NX_ELEC_AC_ESS_BUS_IS_POWERED',
   elecFo = 'L:A32NX_ELEC_AC_2_BUS_IS_POWERED',
@@ -215,6 +217,7 @@ export enum PFDVars {
 /** A publisher to poll and publish nav/com simvars. */
 export class PFDSimvarPublisher extends UpdatableSimVarPublisher<PFDSimvars> {
   private static simvars = new Map<keyof PFDSimvars, SimVarDefinition>([
+    ['climbDerate', { name: PFDVars.climbDerate, type: SimVarValueType.Number }],
     ['elec', { name: PFDVars.elec, type: SimVarValueType.Bool }],
     ['elecFo', { name: PFDVars.elecFo, type: SimVarValueType.Bool }],
     ['potentiometerCaptain', { name: PFDVars.potentiometerCaptain, type: SimVarValueType.Number }],

@@ -14,6 +14,7 @@ export enum A1A2Messages {
   MACH,
   THR_MCT,
   THR_CLB,
+  THR_DCLB,
   THR_LVR,
   THR_IDLE,
   A_FLOOR,
@@ -32,6 +33,7 @@ export function computeA1A2Message(
   atsFmaDiscreteWord: Arinc429WordData,
   autoBrakeActive: boolean,
   autoBrakeMode: number,
+  climbDerate: number,
 ): A1A2Messages {
   if (atsFmaDiscreteWord.bitValueOr(11, false)) {
     return A1A2Messages.MAN_TOGA;
@@ -50,7 +52,7 @@ export function computeA1A2Message(
   } else if (atsFmaDiscreteWord.bitValueOr(12, false)) {
     return A1A2Messages.THR_MCT;
   } else if (atsFmaDiscreteWord.bitValueOr(14, false)) {
-    return A1A2Messages.THR_CLB;
+    return climbDerate > 0 ? A1A2Messages.THR_DCLB : A1A2Messages.THR_CLB;
   } else if (atsFmaDiscreteWord.bitValueOr(15, false) && atEngaged && atActive) {
     return A1A2Messages.THR_LVR;
   } else if (atsFmaDiscreteWord.bitValueOr(16, false)) {

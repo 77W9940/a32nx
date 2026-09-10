@@ -381,4 +381,16 @@ export interface FmcInterface extends FlightPhaseManagerProxyInterface, FmsDataI
    * Gets a subscribable which indicates whether draft winds exist for the active flight plan.
    */
   getDraftWindsExist(): Subscribable<boolean>;
+
+  /**
+   * Gets the recorded history winds, with an interpolated entry added for the cruise level if applicable.
+   * @param cruiseLevel the active flight plan's cruise flight level, or null if not set.
+   */
+  getHistoryWinds(cruiseLevel: number | null): readonly HistoryWindEntry[];
+
+  /**
+   * Inserts the recorded history winds into the active flight plan's climb wind entries.
+   * @returns whether the insertion succeeded.
+   */
+  insertHistoryWinds(): boolean;
 }

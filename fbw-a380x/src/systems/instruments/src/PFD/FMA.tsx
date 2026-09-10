@@ -103,6 +103,8 @@ export class FMA extends DisplayComponent<{
 
   private readonly athrActive = this.primFgAtsDiscreteWord.map((word) => word.bitValueOr(12, false));
 
+  private readonly climbDerate = ConsumerSubject.create(this.sub.on('climbDerate'), 0);
+
   private machPresel = Arinc429LocalVarConsumerSubject.create(this.sub.on('prim_presel_mach'));
 
   private speedPresel = Arinc429LocalVarConsumerSubject.create(this.sub.on('prim_presel_speed'));
@@ -191,14 +193,22 @@ export class FMA extends DisplayComponent<{
   );
 
   private readonly A1A2Message = MappedSubject.create(
-    ([athrEngaged, athrActive, primFgAtsFmaDiscreteWord, autoBrakeActive, autoBrakeMode]) => {
-      return computeA1A2Message(athrEngaged, athrActive, primFgAtsFmaDiscreteWord, autoBrakeActive, autoBrakeMode);
+    ([athrEngaged, athrActive, primFgAtsFmaDiscreteWord, autoBrakeActive, autoBrakeMode, climbDerate]) => {
+      return computeA1A2Message(
+        athrEngaged,
+        athrActive,
+        primFgAtsFmaDiscreteWord,
+        autoBrakeActive,
+        autoBrakeMode,
+        climbDerate,
+      );
     },
     this.athrEngaged,
     this.athrActive,
     this.primFgAtsFmaDiscreteWord,
     this.autoBrakeActive,
     this.autoBrakeMode,
+    this.climbDerate,
   );
 
   private readonly A3Message = MappedSubject.create(
@@ -509,6 +519,8 @@ class A1A2Cell extends ShowForSecondsComponent<A1A2CellProps> {
 
   private flexTemp = ConsumerSubject.create(this.sub.on('flexTemp'), 0);
 
+  private climbDerate = ConsumerSubject.create(this.sub.on('climbDerate'), 0);
+
   constructor(props: A1A2CellProps) {
     super(props, 10);
   }
@@ -582,6 +594,12 @@ class A1A2Cell extends ShowForSecondsComponent<A1A2CellProps> {
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR CLB</text>';
         this.displayModeChangedPath();
         break;
+      case A1A2Messages.THR_DCLB: {
+        const derate = Math.round(this.climbDerate.get());
+        text = `<text  class="FontSmall MiddleAlign Green" x="16.782249" y="7.1280665">THR DCLB${derate}</text>`;
+        this.displayModeChangedPath();
+        break;
+      }
       case A1A2Messages.THR_LVR:
         text = '<text  class="FontMedium MiddleAlign Green" x="16.782249" y="7.1280665">THR LVR</text>';
         this.displayModeChangedPath();
@@ -645,6 +663,10 @@ class A1A2Cell extends ShowForSecondsComponent<A1A2CellProps> {
     }, true);
 
     this.flexTemp.sub(() => {
+      this.setText();
+    }, true);
+
+    this.climbDerate.sub(() => {
       this.setText();
     }, true);
   }

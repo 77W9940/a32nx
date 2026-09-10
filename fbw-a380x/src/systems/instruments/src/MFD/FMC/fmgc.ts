@@ -74,6 +74,12 @@ export class FmgcData {
     return sub.map((it) => (it !== null ? it.toFixed(0) : '-'.repeat(numberDashes)));
   }
 
+  public readonly cpnyFplnAvailable = Subject.create(false);
+
+  public readonly cpnyFplnRequestedForPlan = Subject.create<FlightPlanIndex | null>(null);
+
+  public readonly cpnyFplnUplinkInProgress = Subject.create(false);
+
   public readonly flightPhase = Subject.create(FmgcFlightPhase.Preflight);
 
   public readonly atcCallsign = Subject.create<string | null>(null);
