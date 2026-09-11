@@ -504,6 +504,7 @@ export class NDComponent<T extends number> extends DisplayComponent<NDProps<T>> 
           {/* ND Raster map - middle layer */}
           <CanvasMap
             bus={this.props.bus}
+            side={this.props.side}
             x={Subject.create(384)}
             y={Subject.create(384)}
             options={this.props.mapOptions}

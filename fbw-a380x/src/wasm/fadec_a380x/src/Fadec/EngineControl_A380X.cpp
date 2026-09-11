@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: GPL-3.0
 
 #include "logging.h"
+#include <cstdio>
 #ifdef PROFILING
 #include "ScopedTimer.hpp"
 #include "SimpleProfiler.hpp"
@@ -84,6 +85,7 @@ void EngineControl_A380X::update() {
       case STARTING:
       case RESTARTING:
         engineStartProcedure(engine, engineState, deltaTime, engineTimer, simN3, ambientTemperature);
+        engineFlightHours[engineIdx] += deltaTime / 3600.0;
         break;
       case SHUTTING:
         engineShutdownProcedure(engine, deltaTime, engineTimer, simN1, ambientTemperature);
@@ -94,6 +96,7 @@ void EngineControl_A380X::update() {
         double correctedFuelFlow = updateFF(engine, simCN1, mach, pressureAltitude, ambientTemperature, ambientPressure);
         updateEGT(engine, engineState, deltaTime, simCN1, correctedFuelFlow, mach, pressureAltitude, ambientTemperature, simOnGround);
         updateSecondaryParameters(engine, engineState, deltaTime, simOnGround, ambientTemperature, deltaN3);
+        engineFlightHours[engineIdx] += deltaTime / 3600.0;
         break;
     }
   }
@@ -111,6 +114,18 @@ void EngineControl_A380X::update() {
                         : 0;
   const int wai   = simData.wingAntiIce->getAsInt64();
   updateThrustLimits(msfsHandlerPtr->getSimulationTime(), pressureAltitude, ambientTemperature, ambientPressure, mach, packs, nai, wai);
+
+  // Save engine flight hours periodically
+  const double simTime = msfsHandlerPtr->getSimulationTime();
+  if (simTime - lastEngineHoursSaveTime >= ENGINE_HOURS_SAVE_INTERVAL) {
+    FILE* saveFile = fopen(FILENAME_ENGINE_HOURS, "w");
+    if (saveFile) {
+      fprintf(saveFile, "%.4f %.4f %.4f %.4f",
+              engineFlightHours[0], engineFlightHours[1], engineFlightHours[2], engineFlightHours[3]);
+      fclose(saveFile);
+    }
+    lastEngineHoursSaveTime = simTime;
+  }
 
 #ifdef PROFILING
   profilerUpdate.stop();
@@ -188,6 +203,29 @@ void EngineControl_A380X::initializeEngineControlData() {
   simData.engineOilTotal[E2]->set((std::rand() % (MAX_OIL - MIN_OIL + 1) + MIN_OIL) / 10.0);
   simData.engineOilTotal[E3]->set((std::rand() % (MAX_OIL - MIN_OIL + 1) + MIN_OIL) / 10.0);
   simData.engineOilTotal[E4]->set((std::rand() % (MAX_OIL - MIN_OIL + 1) + MIN_OIL) / 10.0);
+
+  // Per-engine manufacturing health — base random (±0.9% → 1.8% N1 spread), then wear from flight hours
+  for (int i = 0; i < 4; i++) {
+    engineHealth[i] = 1.0 + (std::rand() % 1801 - 900) / 100000.0;
+  }
+
+  // Load engine flight hours from file
+  FILE* hoursFile = fopen(FILENAME_ENGINE_HOURS, "r");
+  if (hoursFile) {
+    fscanf(hoursFile, "%lf %lf %lf %lf",
+           &engineFlightHours[0], &engineFlightHours[1], &engineFlightHours[2], &engineFlightHours[3]);
+    fclose(hoursFile);
+    // Apply wear degradation: each hour adds ENGINE_WEAR_RATE to health
+    for (int i = 0; i < 4; i++) {
+      engineHealth[i] += engineFlightHours[i] * ENGINE_WEAR_RATE;
+    }
+  }
+
+  // Write health L-vars once so EWD always has valid values
+  simData.engineHealth1->set(engineHealth[0]);
+  simData.engineHealth2->set(engineHealth[1]);
+  simData.engineHealth3->set(engineHealth[2]);
+  simData.engineHealth4->set(engineHealth[3]);
 
   // Setting initial Oil Temperature
   const bool simOnGround = msfsHandlerPtr->getSimOnGround();
@@ -294,8 +332,8 @@ void EngineControl_A380X::initializeFuelTanks(FLOAT64 timeStamp, UINT64 tickCoun
     simData.fuelFeedFourPre->set(simData.fuelTankDataPtr->data().fuelSystemFeedFour * weightLbsPerGallon);
     simData.fuelRightOuterPre->set(simData.fuelTankDataPtr->data().fuelSystemRightOuter * weightLbsPerGallon);
     simData.fuelTrimPre->set(simData.fuelTankDataPtr->data().fuelSystemTrim * weightLbsPerGallon);
+    }
   }
-}
 
 void EngineControl_A380X::generateIdleParameters(double pressAltitude, double mach, double ambientTemperature, double ambientPressure) {
   const double idleCN1 = Table1502_A380X::iCN1(pressAltitude, mach, ambientTemperature);
@@ -434,7 +472,7 @@ void EngineControl_A380X::engineStartProcedure(int         engine,
     if (msfsHandlerPtr->getSimOnGround()) {
       simData.engineFuelUsed[engineIdx]->set(0);
     }
-    simData.engineTimer[engineIdx]->set(engineTimer + deltaTime);
+    simData.engineTimer[engineIdx]->set(engineTimer + deltaTime / engineHealth[engineIdx]);
     simData.engineCorrectedN3DataPtr[engineIdx]->data().correctedN3 = 0;
     simData.engineCorrectedN3DataPtr[engineIdx]->writeDataToSim();
   }
@@ -507,18 +545,19 @@ void EngineControl_A380X::engineShutdownProcedure(int    engine,
   }
   // delay to simulate the delay between master-switch setting and actual engine shutdown
   else if (engineTimer < 1.8) {
-    simData.engineTimer[engineIdx]->set(engineTimer + deltaTime);
+    simData.engineTimer[engineIdx]->set(engineTimer + deltaTime / engineHealth[engineIdx]);
   } else {
     const double preN1Fbw  = simData.engineN1[engineIdx]->get();
     const double preN3Fbw  = simData.engineN3[engineIdx]->get();
     const double preEgtFbw = simData.engineEgt[engineIdx]->get();
+    const double dt         = deltaTime / engineHealth[engineIdx];
 
-    double newN1Fbw = Polynomial_A380X::shutdownN1(preN1Fbw, deltaTime);
+    double newN1Fbw = Polynomial_A380X::shutdownN1(preN1Fbw, dt);
     if (simN1 < 5 && simN1 > newN1Fbw) {  // Takes care of windmilling
       newN1Fbw = simN1;
     }
-    const double newN3Fbw  = Polynomial_A380X::shutdownN3(preN3Fbw, deltaTime);
-    const double newEgtFbw = Polynomial_A380X::shutdownEGT(preEgtFbw, ambientTemperature, deltaTime);
+    const double newN3Fbw  = Polynomial_A380X::shutdownN3(preN3Fbw, dt);
+    const double newEgtFbw = Polynomial_A380X::shutdownEGT(preEgtFbw, ambientTemperature, dt);
 
     simData.engineN1[engineIdx]->set(newN1Fbw);
     simData.engineN2[engineIdx]->set(newN3Fbw == 0 ? 0 : newN3Fbw + 0.7);
@@ -566,9 +605,9 @@ void EngineControl_A380X::updatePrimaryParameters(int engine, double simN1, doub
 
   const int engineIdx = engine - 1;
 
-  simData.engineN1[engineIdx]->set(simN1);
-  simData.engineN2[engineIdx]->set(simN3 > 0 ? simN3 + 0.7 : simN3);
-  simData.engineN3[engineIdx]->set(simN3);
+  simData.engineN1[engineIdx]->set(simN1 * engineHealth[engineIdx]);
+  simData.engineN2[engineIdx]->set(simN3 > 0 ? simN3 * engineHealth[engineIdx] + 0.7 : simN3);
+  simData.engineN3[engineIdx]->set(simN3 * engineHealth[engineIdx]);
 
 #ifdef PROFILING
   profilerUpdatePrimaryParameters.stop();
@@ -871,7 +910,13 @@ void EngineControl_A380X::updateFuel(double deltaTimeSeconds) {
           previousFuelFlowRate = *enginePreFF[i];
           *fuelBurn[i]         = std::min((fuelFlowRateChange * std::pow(deltaTimeHours, 2) / 2) + (previousFuelFlowRate * deltaTimeHours),
                                           *fuelExtraQty[i]);  // KG, limits fuelburn to remaining tank qty
-        }
+  // Write health L-vars once so EWD always has valid values
+  simData.engineHealth1->set(engineHealth[0]);
+  simData.engineHealth2->set(engineHealth[1]);
+  simData.engineHealth3->set(engineHealth[2]);
+  simData.engineHealth4->set(engineHealth[3]);
+
+}
         // Fuel Used Accumulators
         *fuelUsedEngine[i] += *fuelBurn[i];
       }
@@ -1044,7 +1089,11 @@ void EngineControl_A380X::updateThrustLimits(double simulationTime,
 
       const double idleN1 = simData.engineIdleN1->get();
       const double thr = std::max(0.042, std::min(1.0, targetThrPct / 100.0));
-      clb = idleN1 + (toga - idleN1) * (thr - 0.042) / 0.958;
+      const double clbRange = (toga - idleN1) * (thr - 0.042) / 0.958;
+      // Allow worst engine to hit target — scale N1 range by maxHealth
+      double maxHealth = engineHealth[0];
+      for (int i = 1; i < 4; i++) { if (engineHealth[i] > maxHealth) maxHealth = engineHealth[i]; }
+      clb = idleN1 + clbRange * maxHealth;
     }
   }
 

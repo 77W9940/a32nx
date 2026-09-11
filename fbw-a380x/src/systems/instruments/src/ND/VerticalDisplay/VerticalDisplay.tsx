@@ -319,7 +319,15 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
 
   private readonly wxrTawsSysSelected = ConsumerSubject.create(this.sub.on('a32nx_aesu_wxr_taws_sys_selected'), 1);
   private readonly terrSysOff = ConsumerSubject.create(this.sub.on('a32nx_aesu_terr_sys_off'), false);
-  private readonly activeOverlay = ConsumerSubject.create(this.sub.on('a380x_efis_cp_active_overlay'), 0);
+  private readonly wxrVisible = ConsumerSubject.create(this.sub.on('set_weather_radar_visible'), false);
+
+  private readonly pposLat = Arinc429LocalVarConsumerSubject.create(this.sub.on('latitude'));
+  private readonly pposLon = Arinc429LocalVarConsumerSubject.create(this.sub.on('longitude'));
+
+  private readonly pposLatValue = MappedSubject.create(([lat]) => lat.valueOr(0), this.pposLat);
+  private readonly pposLonValue = MappedSubject.create(([lon]) => lon.valueOr(0), this.pposLon);
+
+
 
   private readonly rangeChangeFlagCondition = MappedSubject.create(
     ([flagShown, flagReason]) =>
@@ -354,9 +362,9 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
   );
 
   private readonly wxrInop = MappedSubject.create(
-    ([activeFailed, activeOverlay]) => activeOverlay === 1 && activeFailed,
+    ([activeFailed, wxrVisible]) => wxrVisible && activeFailed,
     this.activeWxrFailed,
-    this.activeOverlay,
+    this.wxrVisible,
   );
 
   private readonly rangeChangeFlagVisibility = MappedSubject.create(
@@ -467,7 +475,11 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
       this.altitudeFlTextVisible,
       this.wxrTawsSysSelected,
       this.terrSysOff,
-      this.activeOverlay,
+      this.wxrVisible,
+      this.pposLat,
+      this.pposLon,
+      this.pposLatValue,
+      this.pposLonValue,
       this.rangeChangeFlagCondition,
       this.modeChangeFlagCondition,
       this.noTerrAndWxDataAvailFlagCondition,
@@ -608,6 +620,9 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
           shouldShowTrackLine={this.shouldShowTrackLine}
           fpa={this.fpa}
           selectedAltitude={this.selectedAltitude}
+          wxrVisible={this.wxrVisible}
+          wxrCenterLat={this.pposLatValue}
+          wxrCenterLong={this.pposLonValue}
         />
         <svg
           ref={this.labelSvgRef}
@@ -756,14 +771,6 @@ export class VerticalDisplay extends DisplayComponent<VerticalDisplayProps> {
             style={{ visibility: this.terrInopFlagVisibility }}
           >
             TERR INOP
-          </text>
-          <text
-            x={565}
-            y={960}
-            class="Amber FontSmall MiddleAlign shadow"
-            style={{ visibility: this.wxrInopFlagVisibility }}
-          >
-            WXR INOP
           </text>
           <text
             x={422}

@@ -36,6 +36,8 @@ import { GenericFcuEvents } from '@flybywiresim/navigation-display';
 import { FGVars } from '../../MsfsAvionicsCommon/providers/FGDataPublisher';
 import { MfdSurvEvents } from '../../MsfsAvionicsCommon/providers/MfdSurvPublisher';
 
+import { VdWxrOverlay } from './VdWxrOverlay';
+
 export interface VerticalDisplayCanvasMapProps extends ComponentProps {
   bus: ArincEventBus;
   side: EfisSide;
@@ -48,6 +50,9 @@ export interface VerticalDisplayCanvasMapProps extends ComponentProps {
   shouldShowTrackLine: Subscribable<boolean>;
   selectedAltitude: Subscribable<number>;
   fpa: Subscribable<Arinc429WordData>;
+  wxrVisible: Subscribable<boolean>;
+  wxrCenterLat: Subscribable<number>;
+  wxrCenterLong: Subscribable<number>;
 }
 
 export class VerticalDisplayCanvasMap extends DisplayComponent<VerticalDisplayCanvasMapProps> {
@@ -297,19 +302,30 @@ export class VerticalDisplayCanvasMap extends DisplayComponent<VerticalDisplayCa
 
   render(): VNode {
     return (
-      <canvas
-        ref={this.canvasRef}
-        width={VERTICAL_DISPLAY_CANVAS_WIDTH}
-        height={VERTICAL_DISPLAY_CANVAS_HEIGHT}
-        style={{
-          width: `${VERTICAL_DISPLAY_CANVAS_WIDTH}px`,
-          height: `${VERTICAL_DISPLAY_CANVAS_HEIGHT}px`,
-          position: 'absolute',
-          top: '800px',
-          left: '150px',
-          visibility: this.pathVisibility,
-        }}
-      />
+      <>
+        <canvas
+          ref={this.canvasRef}
+          width={VERTICAL_DISPLAY_CANVAS_WIDTH}
+          height={VERTICAL_DISPLAY_CANVAS_HEIGHT}
+          style={{
+            width: `${VERTICAL_DISPLAY_CANVAS_WIDTH}px`,
+            height: `${VERTICAL_DISPLAY_CANVAS_HEIGHT}px`,
+            position: 'absolute',
+            top: '800px',
+            left: '150px',
+            visibility: this.pathVisibility,
+          }}
+        />
+        <div style="position: absolute; top: 800px; left: 150px; width: 540px; height: 200px;">
+          <VdWxrOverlay
+            side={this.props.side}
+            wxrVisible={this.props.wxrVisible}
+            centerLat={this.props.wxrCenterLat}
+            centerLong={this.props.wxrCenterLong}
+            range={this.props.vdRange}
+          />
+        </div>
+      </>
     );
   }
 }

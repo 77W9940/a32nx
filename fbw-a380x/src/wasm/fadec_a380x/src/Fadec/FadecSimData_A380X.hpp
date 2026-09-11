@@ -251,6 +251,10 @@ class FadecSimData_A380X {
   NamedVariablePtr wingAntiIce;
   NamedVariablePtr climbDerate;
   NamedVariablePtr autothrustMode;
+  NamedVariablePtr engineHealth1;
+  NamedVariablePtr engineHealth2;
+  NamedVariablePtr engineHealth3;
+  NamedVariablePtr engineHealth4;
 
   NamedVariablePtr fadecQuickMode;  // 0 or 1
   NamedVariablePtr engineTla[4];
@@ -446,6 +450,10 @@ class FadecSimData_A380X {
 
     climbDerate = dm->make_named_var("A32NX_CLIMB_DERATE", UNITS.Number, AUTO_READ);
     autothrustMode = dm->make_named_var("A32NX_AUTOTHRUST_MODE", UNITS.Number, AUTO_READ);
+    engineHealth1 = dm->make_named_var("A32NX_ENGINE_HEALTH:1", UNITS.Number, NO_AUTO_UPDATE);
+    engineHealth2 = dm->make_named_var("A32NX_ENGINE_HEALTH:2", UNITS.Number, NO_AUTO_UPDATE);
+    engineHealth3 = dm->make_named_var("A32NX_ENGINE_HEALTH:3", UNITS.Number, NO_AUTO_UPDATE);
+    engineHealth4 = dm->make_named_var("A32NX_ENGINE_HEALTH:4", UNITS.Number, NO_AUTO_UPDATE);
     fadecQuickMode = dm->make_named_var("A32NX_AIRCRAFT_PRESET_QUICK_MODE", UNITS.Number, AUTO_READ);
     fadecQuickMode->set(0);
     engineTla[E1] = dm->make_named_var("A32NX_AUTOTHRUST_TLA:1", UNITS.Number, AUTO_READ);
