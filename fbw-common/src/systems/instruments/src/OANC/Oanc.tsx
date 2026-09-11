@@ -14,7 +14,6 @@ import {
   Subject,
   Subscribable,
   SubscribableArrayEventType,
-  UnitType,
   VNode,
   Wait,
 } from '@microsoft/msfs-sdk';
@@ -52,11 +51,13 @@ import {
   union,
 } from '@turf/turf';
 import { Feature, FeatureCollection, Geometry, LineString, Point, Polygon, MultiPolygon, Position } from 'geojson';
-import { bearingTo, clampAngle, Coordinates, distanceTo, placeBearingDistance } from 'msfs-geo';
+import { bearingTo, clampAngle, Coordinates, distanceTo } from 'msfs-geo';
 
 import { reciprocal } from '@fmgc/guidance/lnav/CommonGeometry';
 import { OansBrakeToVacateSelection } from './OansBrakeToVacateSelection';
 import { LAYER_SPECIFICATIONS } from './style-data';
+import { OancStaticCanvasLayer } from './OancStaticCanvasLayer';
+import { OancBtvCanvasLayer } from './OancBtvCanvasLayer';
 import { OancMovingModeOverlay, OancStaticModeOverlay } from './OancMovingModeOverlay';
 import { OancAircraftIcon } from './OancAircraftIcon';
 import { OancLabelManager } from './OancLabelManager';
@@ -64,13 +65,10 @@ import { OancPositionComputer } from './OancPositionComputer';
 import { OancMarkerManager } from './OancMarkerManager';
 import { ResetPanelSimvars } from './ResetPanelPublisher';
 import { NavigraphAmdbClient } from './api/NavigraphAmdbClient';
-import { pointAngle } from './OancMapUtils';
 import { LubberLine } from '../ND/pages/arc/LubberLine';
 
 export const OANC_RENDER_WIDTH = 768;
 export const OANC_RENDER_HEIGHT = 768;
-
-const FEATURE_DRAW_PER_FRAME = 50;
 
 export const ZOOM_TRANSITION_TIME_MS = 300;
 
@@ -155,29 +153,20 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
   private readonly panContainerRef = [FSComponent.createRef<HTMLDivElement>(), FSComponent.createRef<HTMLDivElement>()];
 
-  private readonly layerCanvasRefs = [
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-  ];
+  private readonly staticCanvasLayerRef = FSComponent.createRef<OancStaticCanvasLayer>();
 
-  private readonly layerCanvasScaleContainerRefs = [
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-    FSComponent.createRef<HTMLCanvasElement>(),
-  ];
+  /**
+   * TODO(Task 5): BTV still draws via its old local-meters + context-translate math (OansBrakeToVacateSelection.ts),
+   * which is not yet updated to draw through Oanc.projectPoint(). Until that lands, BTV's dynamic overlay (stop
+   * lines, runway-ahead markers) will not render correctly on this canvas.
+   */
+  private readonly btvCanvasLayerRef = FSComponent.createRef<OancBtvCanvasLayer>();
 
   public labelContainerRef = FSComponent.createRef<HTMLDivElement>();
 
   public data: AmdbFeatureCollection | undefined;
 
   private arpCoordinates = Subject.create<Coordinates | null>(null);
-
-  private canvasCenterCoordinates: Coordinates | null = null;
 
   private readonly dataAirportName = Subject.create('');
 
@@ -254,14 +243,6 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
   private modeAnimationMapNorthUp = Subject.create(false);
 
-  private canvasWidth = Subject.create(0);
-
-  private canvasHeight = Subject.create(0);
-
-  private canvasCentreX = Subject.create(0);
-
-  private canvasCentreY = Subject.create(0);
-
   // TODO: Should be using GPS position interpolated with IRS velocity data
   private readonly pposLatWord = Arinc429LocalVarConsumerSubject.create(this.sub.on('latitude'));
   private readonly pposLongWord = Arinc429LocalVarConsumerSubject.create(this.sub.on('longitude'));
@@ -305,8 +286,6 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
   public readonly zoomLevelIndex: Subject<number> = Subject.create(this.props.zoomValues.length - 1);
 
-  public readonly canvasCentreReferencedMapParams = new MapParameters();
-
   public readonly arpReferencedMapParams = new MapParameters();
 
   private readonly oansVisible = ConsumerSubject.create<{ side: EfisSide; show: boolean }>(null, {
@@ -324,15 +303,18 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
   private readonly fmsDataStore = new OansFmsDataStore(this.props.bus);
 
+  // TODO(Task 5): canvasRef/canvasCentreX/canvasCentreY intentionally omitted - BTV's draw methods no-op via their
+  // existing `!this.canvasRef?.getOrDefault()` guards until they're updated to draw through btvCanvasLayerRef's own
+  // projection instead of local-meters + context-translate.
   private readonly btvUtils = new OansBrakeToVacateSelection<T>(
     this.props.bus,
     this.labelManager,
     this.aircraftOnGround,
     this.projectedPpos,
     this.arpCoordinates,
-    this.layerCanvasRefs[this.layerCanvasRefs.length - 1],
-    this.canvasCentreX,
-    this.canvasCentreY,
+    undefined,
+    undefined,
+    undefined,
     this.zoomLevelIndex,
     this.getZoomLevelInverseScale.bind(this),
   );
@@ -548,21 +530,13 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
     this.zoomLevelIndex.sub(() => this.handleLabelFilter(), true);
 
+    // Only write the (cheap, GPU-composited) pan transform here. Update() already calls reflowLabels()
+    // unconditionally every frame regardless of panning, so calling it again here too was pure redundant DOM work
+    // on every single raw mousemove tick during a drag (which fires far faster than the frame rate) - that's what
+    // was causing pan stutter.
     MappedSubject.create(this.panOffsetX, this.panOffsetY).sub(([x, y]) => {
       this.panContainerRef[0].instance.style.transform = `translate(${x}px, ${y}px)`;
       this.panContainerRef[1].instance.style.transform = `translate(${x}px, ${y}px)`;
-
-      const depRwy = this.fmsDataStore.departureRunway.get();
-      const ldgRwy = this.fmsDataStore.landingRunway.get();
-      const btvRwy = this.btvUtils.btvRunway.get();
-      const btvExit = this.btvUtils.btvExit.get();
-
-      this.labelManager.reflowLabels(
-        depRwy !== null ? depRwy : undefined,
-        ldgRwy !== null ? ldgRwy : undefined,
-        btvRwy !== null ? btvRwy : undefined,
-        btvExit !== null ? btvExit : undefined,
-      );
     });
 
     MappedSubject.create(
@@ -605,8 +579,6 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
           break;
       }
     }
-
-    this.handleLayerVisibilities();
 
     setTimeout(() => (this.labelManager.showLabels = true), ZOOM_TRANSITION_TIME_MS + 200);
   }
@@ -739,45 +711,19 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
       this.aircraftWithinAirport.set(false);
     }
 
-    const width = (dataBbox[2] - dataBbox[0]) * 1;
-    const height = (dataBbox[3] - dataBbox[1]) * 1;
-
-    this.canvasWidth.set(width);
-    this.canvasHeight.set(height);
-    this.canvasCentreX.set(Math.abs(dataBbox[0]));
-    this.canvasCentreY.set(Math.abs(dataBbox[3]));
-
-    this.canvasCenterCoordinates = this.calculateCanvasCenterCoordinates();
-
     this.sortDataIntoLayers(this.data);
     this.generateAllLabels(this.data);
 
+    const staticCanvasLayer = this.staticCanvasLayerRef.getOrDefault();
+    staticCanvasLayer?.setAirportData(this.arpCoordinates.get() !== null, this.layerFeatures, this.dataAirportIcao.get());
+    // Belt-and-suspenders: setAirportData() already triggers a redraw whenever the airport ICAO key changes, but
+    // loadAirportMap() can be reached via several different event-driven paths (oans_display_airport,
+    // oansPerformanceModeHide toggling, manual reload), and this is the one place all of them funnel through once
+    // loading actually completes - force a redraw here too so a race in the key-comparison logic can never leave a
+    // stale drawing on screen.
+    staticCanvasLayer?.requestRedraw();
+
     this.dataLoading = false;
-  }
-
-  private calculateCanvasCenterCoordinates() {
-    const arpCoordinates = this.arpCoordinates.get();
-
-    if (arpCoordinates) {
-      const pxDistanceToCanvasCentre = MathUtils.pointDistance(
-        this.canvasWidth.get() / 2,
-        this.canvasHeight.get() / 2,
-        this.canvasCentreX.get(),
-        this.canvasCentreY.get(),
-      );
-      const nmDistanceToCanvasCentre = UnitType.NMILE.convertFrom(pxDistanceToCanvasCentre / 1_000, UnitType.KILOMETER);
-      const angleToCanvasCentre = clampAngle(
-        pointAngle(
-          this.canvasWidth.get() / 2,
-          this.canvasHeight.get() / 2,
-          this.canvasCentreX.get(),
-          this.canvasCentreY.get(),
-        ) + 90,
-      );
-
-      return placeBearingDistance(arpCoordinates, reciprocal(angleToCanvasCentre), nmDistanceToCanvasCentre);
-    }
-    return null;
   }
 
   private createLabelElement(label: Label): HTMLDivElement {
@@ -1134,10 +1080,6 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
     }
   }
 
-  private lastLayerDrawnIndex = 0;
-
-  private lastFeatureDrawnIndex = 0;
-
   private lastTime = 0;
 
   public Update() {
@@ -1238,53 +1180,8 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
 
     const mapCurrentHeading = this.interpolatedMapHeading.get();
 
-    if (this.canvasCenterCoordinates) {
-      this.canvasCentreReferencedMapParams.compute(this.canvasCenterCoordinates, 0, 0.539957, 1_000, mapCurrentHeading);
-    }
     if (arpCoordinates) {
       this.arpReferencedMapParams.compute(arpCoordinates, 0, 0.539957, 1_000, mapCurrentHeading);
-    }
-
-    let [offsetX, offsetY]: [number, number] = [0, 0];
-    if (this.airportTooFarAwayAndInArcNavMode.get()) {
-      const shiftBy = 5 * Math.max(this.canvasWidth.get(), this.canvasHeight.get());
-      [offsetX, offsetY] = [shiftBy, shiftBy];
-    } else {
-      [offsetX, offsetY] = this.canvasCentreReferencedMapParams.coordinatesToXYy(this.referencePos);
-    }
-
-    // TODO figure out how to not need this
-    offsetY *= -1;
-
-    const rotate = -mapCurrentHeading;
-
-    // Transform layers
-    for (let i = 0; i < this.layerCanvasRefs.length; i++) {
-      const layerSpec = LAYER_SPECIFICATIONS[i];
-
-      const canvas = this.layerCanvasRefs[i].instance;
-      const canvasScaleContainer = this.layerCanvasScaleContainerRefs[i].instance;
-
-      const scale = this.getZoomLevelInverseScale();
-
-      const translateX = -((this.canvasWidth.get() * layerSpec.renderScale) / 2) + OANC_RENDER_WIDTH / 2;
-      const translateY = -((this.canvasHeight.get() * layerSpec.renderScale) / 2) + OANC_RENDER_HEIGHT / 2;
-
-      canvas.style.transform = `translate(${-offsetX}px, ${offsetY}px) scale(${1 / layerSpec.renderScale}) rotate(${rotate}deg)`;
-
-      canvasScaleContainer.style.left = `${translateX}px`;
-      canvasScaleContainer.style.top = `${translateY}px`;
-      canvasScaleContainer.style.transform = `scale(${scale})`;
-
-      const context = canvas.getContext('2d');
-      if (context) {
-        context.resetTransform();
-        context.translate(
-          this.canvasCentreX.get() * layerSpec.renderScale,
-          this.canvasCentreY.get() * layerSpec.renderScale,
-        );
-        context.scale(layerSpec.renderScale, layerSpec.renderScale);
-      }
     }
 
     // Transform airplane
@@ -1292,52 +1189,48 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
     this.aircraftY.set(384);
     this.aircraftRotation.set(this.trueHeadingWord.get().value - mapCurrentHeading);
 
-    // FIXME Use this to update pan offset when zooming
-    /* if (this.previousZoomLevelIndex.get() !== this.zoomLevelIndex.get()) {
-            // In PLAN mode, re-pan to zoom in to center of screen
-            this.panOffsetX.set(this.panOffsetX.get() / this.zoomLevelScales[this.previousZoomLevelIndex.get()] * this.zoomLevelScales[this.zoomLevelIndex.get()]);
-            this.panOffsetY.set(this.panOffsetY.get() / this.zoomLevelScales[this.previousZoomLevelIndex.get()] * this.zoomLevelScales[this.zoomLevelIndex.get()]);
+    // Drive the static canvas layer. It's not attached to any framework "map projection changed" listener - we own
+    // its update cycle the same way we already own labelManager's, positionComputer's, etc. Heading is NEVER a
+    // redraw trigger - see OancStaticCanvasLayer's class doc: the buffer is drawn reference-point-centered, north-up,
+    // and heading is applied purely as a CSS transform (translate/rotate/translate, pivoting on the ARP without
+    // needing content to be centered there), matching how the SDK's own MapCachedCanvasLayer rotates for free
+    // (verified directly in its implementation).
+    if (!this.airportTooFarAwayAndInArcNavMode.get()) {
+      // projectPoint([0, 0]) is the ARP's own projected screen position this frame - see OancStaticCanvasLayer's
+      // class doc for why this is exactly the value needed to track panning between redraws.
+      const [arpProjectedX, arpProjectedY] = this.projectPoint([0, 0]);
+      const scale = this.getZoomLevelInverseScale();
+      // eslint-disable-next-line prefer-const
+      let [offsetX, offsetY] = this.arpReferencedMapParams.coordinatesToXYy(this.referencePos);
+      offsetY *= -1;
 
-            this.previousZoomLevelIndex.set(this.zoomLevelIndex.get());
-        } */
+      this.staticCanvasLayerRef.getOrDefault()?.setZoomLevelIndex(this.zoomLevelIndex.get());
+      // CSS rotate()'s angle must be the *negative* of the map heading - projectPoint(x, y) rotates a point by
+      // +heading (see its own derivation below), while the buffer here is drawn north-up with a Y-flip
+      // (rotationAdjustY comes out negated relative to CSS's y-down rotation convention) - working through both
+      // rotation matrices shows the two effects combine to a sign flip. Verified algebraically end-to-end: this is
+      // the exact angle that reproduces projectPoint()'s rotation via the CSS transform pivoting on the ARP.
+      this.staticCanvasLayerRef
+        .getOrDefault()
+        ?.update(arpProjectedX, arpProjectedY, scale, offsetX, offsetY, -mapCurrentHeading);
+    }
 
-    // Reflow labels if necessary
-    if (this.lastLayerDrawnIndex > this.layerCanvasRefs.length - 1) {
+    if (!this.doneDrawing) {
       this.doneDrawing = true;
-
       this.airportLoading.set(false);
-
-      const depRwy = this.fmsDataStore.departureRunway.get();
-      const ldgRwy = this.fmsDataStore.landingRunway.get();
-      const btvRwy = this.btvUtils.btvRunway.get();
-      const btvExit = this.btvUtils.btvExit.get();
-
-      this.labelManager.reflowLabels(
-        depRwy !== null ? depRwy : undefined,
-        ldgRwy !== null ? ldgRwy : undefined,
-        btvRwy !== null ? btvRwy : undefined,
-        btvExit !== null ? btvExit : undefined,
-      );
-      return;
     }
 
-    const layerFeatures = this.layerFeatures[this.lastLayerDrawnIndex];
-    const layerCanvas = this.layerCanvasRefs[this.lastLayerDrawnIndex].instance.getContext('2d');
+    const depRwy = this.fmsDataStore.departureRunway.get();
+    const ldgRwy = this.fmsDataStore.landingRunway.get();
+    const btvRwy = this.btvUtils.btvRunway.get();
+    const btvExit = this.btvUtils.btvExit.get();
 
-    if (this.lastFeatureDrawnIndex < layerFeatures.features.length && layerCanvas) {
-      renderFeaturesToCanvas(
-        this.lastLayerDrawnIndex,
-        layerCanvas,
-        layerFeatures,
-        this.lastFeatureDrawnIndex,
-        this.lastFeatureDrawnIndex + FEATURE_DRAW_PER_FRAME,
-      );
-
-      this.lastFeatureDrawnIndex += FEATURE_DRAW_PER_FRAME;
-    } else {
-      this.lastLayerDrawnIndex++;
-      this.lastFeatureDrawnIndex = 0;
-    }
+    this.labelManager.reflowLabels(
+      depRwy !== null ? depRwy : undefined,
+      ldgRwy !== null ? ldgRwy : undefined,
+      btvRwy !== null ? btvRwy : undefined,
+      btvExit !== null ? btvExit : undefined,
+    );
   }
 
   private updateLabelClasses() {
@@ -1363,24 +1256,10 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
   }
 
   private clearMap(): void {
-    this.lastLayerDrawnIndex = 0;
-    this.lastFeatureDrawnIndex = 0;
+    this.doneDrawing = false;
 
-    for (const layer of this.layerCanvasRefs) {
-      const ctx = layer.instance.getContext('2d');
-      const cw = this.canvasWidth.get();
-      const ch = this.canvasHeight.get();
-
-      if (ctx) {
-        ctx.clearRect(0, 0, cw, ch);
-      }
-    }
-
-    this.canvasWidth.set(0);
-    this.canvasHeight.set(0);
-
-    this.canvasCentreX.set(0);
-    this.canvasCentreY.set(0);
+    this.staticCanvasLayerRef.getOrDefault()?.setAirportData(false, this.layerFeatures, null);
+    this.staticCanvasLayerRef.getOrDefault()?.requestRedraw();
 
     this.panOffsetX.set(0);
     this.panOffsetY.set(0);
@@ -1452,16 +1331,6 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
         // noop
       }
     }, ZOOM_TRANSITION_TIME_MS);
-  }
-
-  private handleLayerVisibilities() {
-    for (let i = 0; i < this.layerCanvasScaleContainerRefs.length; i++) {
-      const shouldBeVisible = LAYER_SPECIFICATIONS[i].zoomLevelVisibilities[this.zoomLevelIndex.get()];
-
-      const layerContainer = this.layerCanvasScaleContainerRefs[i].instance;
-
-      layerContainer.style.visibility = shouldBeVisible ? 'inherit' : 'hidden';
-    }
   }
 
   public handleZoomIn(): void {
@@ -1663,21 +1532,23 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
             </defs>
           </svg>
 
+          {/*
+            NOTE: these two are fixed-size (viewport + overdraw margin) plain canvases, replacing the old 5
+            airport-bbox-sized canvases - so VRAM cost stays constant regardless of airport size. They manage their
+            own CSS transform (panning between redraws) internally, driven from Update() - they are intentionally
+            NOT nested inside animationContainerRef[0]/panContainerRef[0] (which would double-apply a transform).
+          */}
+          <div style="position: absolute;">
+            <OancStaticCanvasLayer ref={this.staticCanvasLayerRef} />
+            {/* TODO(Task 5): btvCanvasLayerRef is rendered but not yet drawn to - see the btvUtils comment above. */}
+            <OancBtvCanvasLayer ref={this.btvCanvasLayerRef} />
+          </div>
+
           <div
             ref={this.animationContainerRef[0]}
             style={`position: absolute; transition: transform ${ZOOM_TRANSITION_TIME_MS}ms linear;`}
           >
-            <div ref={this.panContainerRef[0]} style="position: absolute;">
-              {this.layerCanvasScaleContainerRefs.map((ref, index) => (
-                <div ref={ref} style={`position: absolute; transition: transform ${ZOOM_TRANSITION_TIME_MS}ms linear;`}>
-                  <canvas
-                    ref={this.layerCanvasRefs[index]}
-                    width={this.canvasWidth.map((it) => it * LAYER_SPECIFICATIONS[index].renderScale)}
-                    height={this.canvasHeight.map((it) => it * LAYER_SPECIFICATIONS[index].renderScale)}
-                  />
-                </div>
-              ))}
-            </div>
+            <div ref={this.panContainerRef[0]} style="position: absolute;" />
           </div>
 
           <div
@@ -1787,146 +1658,3 @@ export class Oanc<T extends number> extends DisplayComponent<OancProps<T>> {
   }
 }
 
-const pathCache = new Map<string, Path2D[]>();
-const pathIdCache = new Map<Feature, string>();
-
-function renderFeaturesToCanvas(
-  layer: number,
-  ctx: CanvasRenderingContext2D,
-  data: FeatureCollection<Geometry, AmdbProperties>,
-  startIndex: number,
-  endIndex: number,
-) {
-  const layerSpec = LAYER_SPECIFICATIONS[layer];
-
-  for (let i = startIndex; i < Math.min(endIndex, data.features.length); i++) {
-    const feature = data.features[i];
-    let doStroke = false;
-
-    let doFill = false;
-
-    const matchingRule = layerSpec.styleRules.find((it) => {
-      if (feature.properties.feattype === FeatureType.VerticalPolygonalStructure) {
-        return (
-          it.forFeatureTypes?.includes(feature.properties.feattype) &&
-          feature.properties.plysttyp &&
-          it.forPolygonStructureTypes?.includes(feature.properties.plysttyp)
-        );
-      }
-
-      return it.forFeatureTypes?.includes(feature.properties.feattype);
-    });
-
-    if (!matchingRule) {
-      console.error(
-        `No matching style rule for feature (feattype=${feature.properties.feattype}) in rules for layer #${layer}`,
-      );
-      continue;
-    }
-
-    if (matchingRule.styles.doStroke !== undefined) {
-      doStroke = matchingRule.styles.doStroke;
-    }
-
-    if (matchingRule.styles.doFill !== undefined) {
-      doFill = matchingRule.styles.doFill;
-    }
-
-    if (matchingRule.styles.strokeStyle !== undefined) {
-      ctx.strokeStyle = matchingRule.styles.strokeStyle;
-    }
-
-    if (matchingRule.styles.lineWidth !== undefined) {
-      ctx.lineWidth = matchingRule.styles.lineWidth;
-    }
-
-    if (matchingRule.styles.fillStyle !== undefined) {
-      ctx.fillStyle = matchingRule.styles.fillStyle;
-    }
-
-    let id = pathIdCache.get(feature);
-    if (!id) {
-      id = `${feature.properties.id}-${feature.properties.feattype}`;
-
-      pathIdCache.set(feature, id);
-    }
-
-    const usePathCache = matchingRule.unionBy === undefined;
-    const cachedPaths = pathCache.get(id);
-
-    switch (feature.geometry.type) {
-      case 'LineString': {
-        const outline = feature.geometry as LineString;
-
-        let path: Path2D;
-        if (usePathCache && cachedPaths) {
-          // eslint-disable-next-line prefer-destructuring
-          path = cachedPaths[0];
-        } else {
-          path = new Path2D();
-
-          path.moveTo(outline.coordinates[0][0], outline.coordinates[0][1] * -1);
-
-          for (let i = 1; i < outline.coordinates.length; i++) {
-            const point = outline.coordinates[i];
-            path.lineTo(point[0], point[1] * -1);
-          }
-
-          pathCache.set(`${feature.properties.id}-${feature.properties.feattype}`, [path]);
-        }
-
-        if (doFill) {
-          ctx.fill(path);
-        }
-
-        if (doStroke) {
-          ctx.stroke(path);
-        }
-
-        break;
-      }
-      case 'Polygon': {
-        const polygon = feature.geometry as Polygon;
-
-        let paths: Path2D[] = [];
-        if (usePathCache && cachedPaths) {
-          paths = cachedPaths;
-        } else {
-          for (const outline of polygon.coordinates) {
-            const toCachePath = new Path2D();
-
-            toCachePath.moveTo(outline[0][0], outline[0][1] * -1);
-
-            for (let i = 1; i < outline.length; i++) {
-              if (i === outline.length - 1) {
-                toCachePath.closePath();
-              } else {
-                const point = outline[i];
-                toCachePath.lineTo(point[0], point[1] * -1);
-              }
-            }
-
-            paths.push(toCachePath);
-          }
-
-          pathCache.set(`${feature.properties.id}-${feature.properties.feattype}`, paths);
-        }
-
-        for (const path of paths) {
-          if (doStroke) {
-            ctx.stroke(path);
-          }
-
-          if (doFill) {
-            ctx.fill(path);
-          }
-        }
-        break;
-      }
-      default: {
-        console.log(`Could not draw geometry of type: ${feature.geometry.type}`);
-        break;
-      }
-    }
-  }
-}

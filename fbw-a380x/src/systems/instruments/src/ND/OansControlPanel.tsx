@@ -925,6 +925,7 @@ export class OansControlPanel extends DisplayComponent<OansProps> {
                           );
                         }}
                         freeTextAllowed={false}
+                        keyboardEntryAllowed={true}
                         numberOfDigitsForInputField={7}
                         alignLabels={this.store.airportSearchMode.map((it) =>
                           it === ControlPanelAirportSearchMode.City ? 'flex-start' : 'center',

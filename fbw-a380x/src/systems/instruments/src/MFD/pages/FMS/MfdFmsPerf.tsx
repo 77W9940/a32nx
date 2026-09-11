@@ -2103,9 +2103,9 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
                     />
                   </div>
                   <div class="mfd-label-value-container">
-                    <span class="mfd-label mfd-spacing-right">DERATED CLB</span>
+                    <span class="mfd-label mfd-spacing-right">THR</span>
                     <DropdownMenu
-                      values={ArraySubject.create(['NONE', '01', '02', '03', '04', '05'])}
+                      values={ArraySubject.create(['NONE', 'DERATE 01', 'DERATE 02', 'DERATE 03'])}
                       inactive={this.clbPageInactive}
                       selectedIndex={this.climbDerated as Subscribable<ClimbDerated>}
                       onModified={(v) =>
@@ -2117,7 +2117,7 @@ export class MfdFmsPerf extends FmsPage<MfdFmsPerfProps> {
                       }
                       idPrefix={`${this.props.mfd.uiService.captOrFo}_MFD_deratedClbDropdown`}
                       freeTextAllowed={false}
-                      containerStyle="width: 125px;"
+                      containerStyle="width: 250px;"
                       numberOfDigitsForInputField={4}
                       alignLabels="center"
                       hEventConsumer={this.props.mfd.hEventConsumer}
